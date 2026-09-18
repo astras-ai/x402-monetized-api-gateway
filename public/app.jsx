@@ -1494,20 +1494,21 @@ func main() {
             </div>
           </div>
 
-		          {/* Admin Navigation Tabs */}
-		          <div className="flex border-b border-gray-800 gap-2 overflow-x-auto pb-1">
-		            {[
-		              { id: 'playground', label: t("nav_playground"), icon: Play },
-		              { id: 'routes', label: t("nav_routes"), icon: Layers },
-		              { id: 'keys', label: t("nav_keys"), icon: Key },
-		              { id: 'secrets', label: t("nav_secrets"), icon: Sliders },
-		              { id: 'code_search', label: t("nav_code_search"), icon: Search },
-		              { id: 'todo_list', label: t("nav_todo_list"), icon: CheckSquare },
-		              { id: 'oidc', label: t("nav_oidc"), icon: ShieldCheck },
-		              { id: 'github', label: t("nav_github"), icon: Code2 },
-		              { id: 'logs', label: t("nav_logs"), icon: Terminal },
-		              { id: 'deploy', label: t("nav_deploy"), icon: Rocket }
-		            ].map(tab => {
+			          {/* Admin Navigation Tabs */}
+			          <div className="flex border-b border-gray-800 gap-2 overflow-x-auto pb-1">
+			            {[
+			              { id: 'playground', label: t("nav_playground"), icon: Play },
+			              { id: 'routes', label: t("nav_routes"), icon: Layers },
+			              { id: 'keys', label: t("nav_keys"), icon: Key },
+			              { id: 'secrets', label: t("nav_secrets"), icon: Sliders },
+			              { id: 'code_search', label: t("nav_code_search"), icon: Search },
+			              { id: 'todo_list', label: t("nav_todo_list"), icon: CheckSquare },
+			              { id: 'oidc', label: t("nav_oidc"), icon: ShieldCheck },
+			              { id: 'github', label: t("nav_github"), icon: Code2 },
+			              { id: 'worker', label: t("nav_worker"), icon: Cpu },
+			              { id: 'logs', label: t("nav_logs"), icon: Terminal },
+			              { id: 'deploy', label: t("nav_deploy"), icon: Rocket }
+			            ].map(tab => {
 	              const Icon = tab.icon;
 	              return (
 	                <button
@@ -1582,7 +1583,10 @@ func main() {
 
                 {/* Target Route Picker */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-300">{t("pg_select_endpoint")}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-300">{t("pg_select_endpoint")}</label>
+                    <span className="text-[10px] text-indigo-400 font-medium">Quick Test Claimed Services 👇</span>
+                  </div>
                   <select
                     value={selectedRoute?.id || ''}
                     onChange={(e) => {
@@ -1597,6 +1601,99 @@ func main() {
                       </option>
                     ))}
                   </select>
+
+                  {/* 1-Click Claimed Services Test Presets */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = routes.find(x => x.type === 'builtin_ai');
+                        if (r) {
+                          handleSelectRoute(r);
+                          setReqPayload(JSON.stringify({ prompt: "What are the core benefits of x402 HTTP 402 micro-payments for AI agents?", model: "@cf/meta/llama-3-8b-instruct" }, null, 2));
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-gray-950 hover:bg-indigo-950/60 border border-gray-800 hover:border-indigo-500/50 rounded-lg text-[11px] font-mono text-gray-300 hover:text-indigo-300 flex items-center gap-1.5 transition-all text-left truncate"
+                    >
+                      <Bot className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <span className="truncate">🤖 AI Text LLM</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = routes.find(x => x.type === 'builtin_ai');
+                        if (r) {
+                          handleSelectRoute(r);
+                          setReqPayload(JSON.stringify({ type: "image", prompt: "Futuristic neon x402 payment gateway badge" }, null, 2));
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-gray-950 hover:bg-purple-950/60 border border-gray-800 hover:border-purple-500/50 rounded-lg text-[11px] font-mono text-gray-300 hover:text-purple-300 flex items-center gap-1.5 transition-all text-left truncate"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span className="truncate">🎨 AI Image Gen</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = routes.find(x => x.type === 'builtin_scraper');
+                        if (r) {
+                          handleSelectRoute(r);
+                          setReqPayload(JSON.stringify({ url: "https://x402.org" }, null, 2));
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-gray-950 hover:bg-emerald-950/60 border border-gray-800 hover:border-emerald-500/50 rounded-lg text-[11px] font-mono text-gray-300 hover:text-emerald-300 flex items-center gap-1.5 transition-all text-left truncate"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="truncate">🌐 Web Scraper</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = routes.find(x => x.type === 'builtin_sandbox');
+                        if (r) {
+                          handleSelectRoute(r);
+                          setReqPayload(JSON.stringify({ language: "javascript", code: "const wallet = '0x71C7...';\nconsole.log('Verifying wallet address:', wallet);\nreturn { valid: true, network: 'Base Mainnet', balance_usdc: 142.50 };" }, null, 2));
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-gray-950 hover:bg-amber-950/60 border border-gray-800 hover:border-amber-500/50 rounded-lg text-[11px] font-mono text-gray-300 hover:text-amber-300 flex items-center gap-1.5 transition-all text-left truncate"
+                    >
+                      <Cpu className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">⚡ Code Sandbox</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = routes.find(x => x.type === 'builtin_devtools');
+                        if (r) {
+                          handleSelectRoute(r);
+                          setReqPayload(JSON.stringify({ text: "https://x402.org/pay?inv=inv_demo_8899", darkColor: "#6366f1", lightColor: "#0f172a" }, null, 2));
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-gray-950 hover:bg-cyan-950/60 border border-gray-800 hover:border-cyan-500/50 rounded-lg text-[11px] font-mono text-gray-300 hover:text-cyan-300 flex items-center gap-1.5 transition-all text-left truncate"
+                    >
+                      <QrCode className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="truncate">📱 QR Generator</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = routes.find(x => x.type === 'custom_proxy');
+                        if (r) {
+                          handleSelectRoute(r);
+                          setReqPayload("");
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-gray-950 hover:bg-blue-950/60 border border-gray-800 hover:border-blue-500/50 rounded-lg text-[11px] font-mono text-gray-300 hover:text-blue-300 flex items-center gap-1.5 transition-all text-left truncate"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span className="truncate">📈 Crypto Prices</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Auth Mode Picker */}
@@ -2478,19 +2575,137 @@ func main() {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-1.5 text-xs">
-                    <div className="font-bold text-indigo-300 flex items-center gap-1.5">
-                      <HelpCircle className="w-4 h-4 text-indigo-400" />
-                      <span>Why don't I see auth settings directly on GitHub?</span>
-                    </div>
-                    <p className="text-gray-400 text-[11px] leading-relaxed">
-                      GitHub stores the open-source codebase repository. Security credentials (<code className="text-emerald-300">{`OPENAI_API_KEY`}</code>, <code className="text-emerald-300">{`PAY_WALLET`}</code>, and Cloudflare Access OIDC SSO rules) are stored securely inside Cloudflare Worker encrypted secrets and SQLite Durable Object storage. To set up GitHub OAuth for external client logins, create an OAuth App under GitHub Settings &gt; Developer Settings &gt; OAuth Apps using your Worker domain URL.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+	                  <div className="p-3 bg-indigo-950/30 border border-indigo-500/30 rounded-xl space-y-1.5 text-xs">
+	                    <div className="font-bold text-indigo-300 flex items-center gap-1.5">
+	                      <HelpCircle className="w-4 h-4 text-indigo-400" />
+	                      <span>Why don't I see auth settings directly on GitHub?</span>
+	                    </div>
+	                    <p className="text-gray-400 text-[11px] leading-relaxed">
+	                      GitHub stores the open-source codebase repository. Security credentials (<code className="text-emerald-300">{`OPENAI_API_KEY`}</code>, <code className="text-emerald-300">{`PAY_WALLET`}</code>, and Cloudflare Access OIDC SSO rules) are stored securely inside Cloudflare Worker encrypted secrets and SQLite Durable Object storage. To set up GitHub OAuth for external client logins, create an OAuth App under GitHub Settings &gt; Developer Settings &gt; OAuth Apps using your Worker domain URL.
+	                    </p>
+	                  </div>
+	                </div>
+	              </div>
+	            </div>
+	          )}
+
+	          {/* TAB: DYNAMIC CLOUDFLARE WORKER RUNTIME & ISOLATE EVALUATOR */}
+	          {activeTab === 'worker' && (
+	            <div className="space-y-6 bg-gray-900/90 border border-gray-800 p-6 rounded-2xl">
+	              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-800 pb-4">
+	                <div>
+	                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+	                    <Cpu className="w-5 h-5 text-indigo-400" />
+	                    <span>⚡ Dynamic Cloudflare Worker Isolate Engine</span>
+	                  </h2>
+	                  <p className="text-xs text-gray-400 mt-0.5">
+	                    Inspect live Cloudflare Worker V8 Isolate state, Durable Object SQLite storage, and execute dynamic serverless logic in real-time.
+	                  </p>
+	                </div>
+	                <button
+	                  onClick={async () => {
+	                    try {
+	                      const res = await fetch("/api/worker/telemetry");
+	                      if (res.ok) setWorkerTelemetry(await res.json());
+	                    } catch {}
+	                  }}
+	                  className="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 flex items-center gap-1.5 transition-all border border-gray-700"
+	                >
+	                  <RefreshCw className="w-3.5 h-3.5" />
+	                  <span>Refresh Telemetry</span>
+	                </button>
+	              </div>
+
+	              {/* Telemetry Cards */}
+	              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
+	                <div className="bg-gray-950 border border-gray-800 p-3.5 rounded-xl space-y-1">
+	                  <div className="text-[10px] text-gray-500 font-sans uppercase">Runtime Isolate</div>
+	                  <div className="text-emerald-400 font-bold truncate">{workerTelemetry?.workerRuntime || 'Cloudflare V8 Isolate'}</div>
+	                </div>
+	                <div className="bg-gray-950 border border-gray-800 p-3.5 rounded-xl space-y-1">
+	                  <div className="text-[10px] text-gray-500 font-sans uppercase">DO State Engine</div>
+	                  <div className="text-indigo-400 font-bold truncate">{workerTelemetry?.durableObject || 'Durable Object SQL'}</div>
+	                </div>
+	                <div className="bg-gray-950 border border-gray-800 p-3.5 rounded-xl space-y-1">
+	                  <div className="text-[10px] text-gray-500 font-sans uppercase">Worker Status</div>
+	                  <div className="text-amber-400 font-bold flex items-center gap-1.5">
+	                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+	                    <span>{workerTelemetry?.status || 'ACTIVE'}</span>
+	                  </div>
+	                </div>
+	                <div className="bg-gray-950 border border-gray-800 p-3.5 rounded-xl space-y-1">
+	                  <div className="text-[10px] text-gray-500 font-sans uppercase">Isolate Memory</div>
+	                  <div className="text-blue-400 font-bold">{workerTelemetry?.memoryAllocatedMb || '128MB'}</div>
+	                </div>
+	              </div>
+
+	              {/* In-Isolate Code Evaluator */}
+	              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+	                <div className="bg-gray-950 border border-gray-800 p-5 rounded-2xl space-y-3">
+	                  <div className="flex items-center justify-between">
+	                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+	                      <Code2 className="w-4 h-4 text-indigo-400" />
+	                      <span>Live V8 Isolate Code Evaluator</span>
+	                    </h3>
+	                    <span className="text-[10px] font-mono text-gray-500">(env, storage, request)</span>
+	                  </div>
+
+	                  <p className="text-xs text-gray-400">
+	                    Write JavaScript logic to execute directly inside the Worker isolate. Access dynamic workspace variables and state.
+	                  </p>
+
+	                  <textarea
+	                    rows={10}
+	                    value={workerEvalCode}
+	                    onChange={(e) => setWorkerEvalCode(e.target.value)}
+	                    className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs font-mono text-indigo-300 focus:outline-none focus:border-indigo-500 leading-relaxed"
+	                  />
+
+	                  <button
+	                    onClick={handleExecuteWorkerEval}
+	                    disabled={isEvaluatingWorker}
+	                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+	                  >
+	                    {isEvaluatingWorker ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+	                    <span>Execute Code in Worker Isolate</span>
+	                  </button>
+	                </div>
+
+	                {/* Evaluation Result Inspector */}
+	                <div className="bg-gray-950 border border-gray-800 p-5 rounded-2xl space-y-3 flex flex-col justify-between">
+	                  <div>
+	                    <div className="flex items-center justify-between border-b border-gray-800 pb-2 mb-3">
+	                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+	                        <Terminal className="w-4 h-4 text-emerald-400" />
+	                        <span>Isolate Execution Output</span>
+	                      </h3>
+	                      {workerEvalResult && (
+	                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+	                          workerEvalResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+	                        }`}>
+	                          {workerEvalResult.executionTimeMs} ms
+	                        </span>
+	                      )}
+	                    </div>
+
+	                    {workerEvalResult ? (
+	                      <pre className="bg-gray-900 border border-gray-800 p-3.5 rounded-xl text-xs font-mono text-emerald-300 overflow-x-auto max-h-[300px] leading-relaxed select-all">
+	                        {JSON.stringify(workerEvalResult, null, 2)}
+	                      </pre>
+	                    ) : (
+	                      <div className="p-8 text-center border border-dashed border-gray-800 rounded-xl text-xs text-gray-500">
+	                        Click "Execute Code in Worker Isolate" to evaluate serverless logic live.
+	                      </div>
+	                    )}
+	                  </div>
+
+	                  <div className="p-3 bg-indigo-950/20 border border-indigo-500/20 rounded-xl text-[11px] text-gray-400 leading-relaxed">
+	                    <span className="font-bold text-indigo-300">⚡ High Performance Edge Execution:</span> Cloudflare Workers execute V8 isolates with zero cold-starts, verifying x402 HTTP micropayments under 2 milliseconds globally.
+	                  </div>
+	                </div>
+	              </div>
+	            </div>
+	          )}
 
         </div>
       )}
