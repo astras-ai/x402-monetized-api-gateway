@@ -23,6 +23,7 @@ Agents interact with the gateway using the **x402 Protocol Header (`X-402-Paymen
 | `GET /v1/tools` | GET | Free | $0.00 | List all available AI tools & pricing |
 | `GET /v1/vaults` | GET | Free | $0.00 | List all 16 multi-chain payment treasury wallets |
 | `GET /v1/plan` | GET | Free | $0.00 | Calculate prepaid deposit token caps & time limits |
+| `GET /v1/report` | GET / POST | Free / Optional | $0.00 | System telemetry report, audit ledger & receipt generator |
 | `GET /.well-known/x402` | GET | Free | $0.00 | x402 protocol machine-readable JSON manifest |
 | `POST /v1/tools/openspec.plan` | POST | Required (`X-402-Payment`) | $0.05 | Software Architecture & Multi-Agent Plan Generator |
 | `POST /v1/tools/review.kimi` | POST | Required (`X-402-Payment`) | $0.05 | Alibaba Open Code Review & Token Receipt Meter |
