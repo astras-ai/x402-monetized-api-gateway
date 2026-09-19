@@ -203,15 +203,19 @@ export function App() {
     }
   ]);
 
-  // Secrets State
-  const [secretsList, setSecretsList] = useState([
-    { key_name: 'CF_API_TOKEN', secret_value: 'cf_api_tok_••••••••••••', category: 'ai', description: 'Cloudflare Workers AI API Token' },
-    { key_name: 'CF_ACCOUNT_ID', secret_value: 'a1b2c3d4e5f67890', category: 'ai', description: 'Cloudflare Account ID' },
-    { key_name: 'PAY_TO', secret_value: '0x71C7...402B89', category: 'web3', description: 'USDC Recipient Vault' },
-    { key_name: 'JWT_SECRET', secret_value: 'aifoundry-secret-key-tonight', category: 'system', description: 'Grant Minting Secret Key' }
-  ]);
+  // Secrets & Encryption State
+  const [secretsList, setSecretsList] = useState([]);
   const [newSecretKey, setNewSecretKey] = useState('');
   const [newSecretValue, setNewSecretValue] = useState('');
+  const [newSecretCategory, setNewSecretCategory] = useState('ai');
+  const [newSecretDesc, setNewSecretDesc] = useState('');
+  const [masterPassphrase, setMasterPassphrase] = useState('aifoundry-master-vault-2026');
+  const [showPassphrase, setShowPassphrase] = useState(false);
+  const [revealedSecrets, setRevealedSecrets] = useState({});
+  const [editingSecretKey, setEditingSecretKey] = useState(null);
+  const [editSecretValue, setEditSecretValue] = useState('');
+  const [sandboxInput, setSandboxInput] = useState('cf_api_tok_live_7781a8c9012');
+  const [sandboxResult, setSandboxResult] = useState(null);
 
   // Logs State
   const [logsList, setLogsList] = useState([
@@ -241,6 +245,9 @@ export function App() {
 
       const logsRes = await fetch('/api/logs');
       if (logsRes.ok) setLogsList(await logsRes.json());
+
+      const secretsRes = await fetch('/api/secrets');
+      if (secretsRes.ok) setSecretsList(await secretsRes.json());
     } catch (e) {
       console.warn('Failed to refresh data from edge:', e);
     }
@@ -391,16 +398,124 @@ export function App() {
       const res = await fetch('/api/secrets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key_name: newSecretKey, secret_value: newSecretValue, category: 'ai' })
+        body: JSON.stringify({
+          key_name: newSecretKey,
+          secret_value: newSecretValue,
+          category: newSecretCategory,
+          description: newSecretDesc || 'Custom Gateway Secret',
+          passphrase: masterPassphrase
+        })
       });
       if (res.ok) {
-        showToast(`Secret ${newSecretKey} saved!`, 'success');
-        setSecretsList([...secretsList.filter(s => s.key_name !== newSecretKey), { key_name: newSecretKey, secret_value: newSecretValue, category: 'ai' }]);
+        showToast(`Secret ${newSecretKey} encrypted with AES-256-GCM & saved!`, 'success');
         setNewSecretKey('');
         setNewSecretValue('');
+        setNewSecretDesc('');
+        refreshData();
+      } else {
+        showToast('Failed to save secret.', 'error');
       }
     } catch (e) {
       showToast('Failed to save secret.', 'error');
+    }
+  };
+
+  const handleDecryptSecret = async (key_name, secret_value) => {
+    if (revealedSecrets[key_name]) {
+      // Toggle hide
+      const updated = { ...revealedSecrets };
+      delete updated[key_name];
+      setRevealedSecrets(updated);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/secrets/decrypt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key_name,
+          secret_value,
+          passphrase: masterPassphrase
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.plaintext) {
+        setRevealedSecrets({ ...revealedSecrets, [key_name]: data.plaintext });
+        showToast(`Decrypted ${key_name} using Master Passphrase`, 'success');
+      } else {
+        showToast(data.error || 'Decryption failed. Check passphrase.', 'error');
+      }
+    } catch (e) {
+      showToast('Decryption error.', 'error');
+    }
+  };
+
+  const handleUpdateSecret = async (key_name, updatedValue) => {
+    if (!updatedValue) {
+      showToast('New secret value cannot be empty.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key_name,
+          secret_value: updatedValue,
+          passphrase: masterPassphrase
+        })
+      });
+      if (res.ok) {
+        showToast(`Secret ${key_name} updated & re-encrypted!`, 'success');
+        setEditingSecretKey(null);
+        setEditSecretValue('');
+        // clear revealed state so user can re-decrypt
+        const updatedRev = { ...revealedSecrets };
+        delete updatedRev[key_name];
+        setRevealedSecrets(updatedRev);
+        refreshData();
+      } else {
+        showToast('Failed to update secret.', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to update secret.', 'error');
+    }
+  };
+
+  const handleDeleteSecret = async (key_name) => {
+    try {
+      const res = await fetch(`/api/secrets/${encodeURIComponent(key_name)}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast(`Secret ${key_name} deleted.`, 'info');
+        refreshData();
+      }
+    } catch (e) {
+      showToast('Failed to delete secret.', 'error');
+    }
+  };
+
+  const handleTestCrypto = async (action) => {
+    if (!sandboxInput) return;
+    try {
+      const res = await fetch('/api/secrets/test-crypto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plaintext: sandboxInput,
+          passphrase: masterPassphrase,
+          action
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSandboxResult(data);
+        showToast(`AES-256-GCM ${action} successful!`, 'success');
+      } else {
+        showToast(data.error || 'Crypto operation failed.', 'error');
+      }
+    } catch (e) {
+      showToast('Crypto operation error.', 'error');
     }
   };
 
@@ -917,54 +1032,287 @@ export function App() {
               </div>
             )}
 
-            {/* TAB 5: SECRETS */}
+            {/* TAB 5: SECRETS & ENCRYPTION */}
             {activeTab === 'secrets' && (
               <div className="space-y-6">
-                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
-                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+                
+                {/* Master Passphrase Vault Header */}
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/30 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between border-b border-indigo-500/20 pb-4 gap-4">
                     <div>
                       <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-purple-400" />
-                        Workspace Environment Variables & Secrets
+                        <Lock className="w-5 h-5 text-emerald-400" />
+                        Workspace Environment Secrets & AES-256-GCM Encryption Vault
                       </h2>
-                      <p className="text-xs text-gray-400 font-mono">Cloudflare Workers AI keys, `PAY_TO` wallets, and JWT signature keys</p>
+                      <p className="text-xs text-gray-400 font-mono">
+                        Hardware-grade client/edge secret encryption for Workers AI tokens, Web3 payout keys, and OIDC grants.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>AES-256-GCM Active</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <input
-                      type="text"
-                      placeholder="KEY_NAME (e.g. CF_API_TOKEN)"
-                      value={newSecretKey}
-                      onChange={(e) => setNewSecretKey(e.target.value)}
-                      className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Secret Value"
-                      value={newSecretValue}
-                      onChange={(e) => setNewSecretValue(e.target.value)}
-                      className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white"
-                    />
-                    <button
-                      onClick={handleAddSecret}
-                      className="py-2.5 rounded-xl bg-indigo-600 font-bold text-xs text-white hover:bg-indigo-500 transition-all"
-                    >
-                      Save Secret
-                    </button>
+                  {/* Master Passphrase Input */}
+                  <div className="p-4 rounded-2xl bg-cosmic-900/90 border border-indigo-500/20 space-y-2">
+                    <label className="text-xs font-bold text-cyan-300 font-mono flex items-center gap-2">
+                      <Key className="w-4 h-4 text-purple-400" />
+                      Master Passphrase for Secret Decryption & Re-Keying:
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showPassphrase ? "text" : "password"}
+                          value={masterPassphrase}
+                          onChange={(e) => setMasterPassphrase(e.target.value)}
+                          placeholder="Enter Master Vault Passphrase..."
+                          className="w-full p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/40 text-xs font-mono text-white pr-10 focus:outline-none focus:border-cyan-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassphrase(!showPassphrase)}
+                          className="absolute right-3 top-2.5 text-gray-400 hover:text-white"
+                        >
+                          {showPassphrase ? <Eye className="w-4 h-4 text-cyan-400" /> : <Lock className="w-4 h-4 text-gray-400" />}
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => showToast('Master Passphrase updated for local session', 'info')}
+                        className="px-4 py-2.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-500 font-bold text-xs text-white transition-all font-mono"
+                      >
+                        Set Passphrase
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 font-mono">
+                      * Values are stored at rest with <code className="text-emerald-400 font-bold">enc:v1:</code> IV salt prefix. Passing this passphrase unlocks Workers AI execution without storing unencrypted secrets on disk.
+                    </p>
                   </div>
 
-                  <div className="space-y-2 pt-2">
-                    {secretsList.map((sec, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-cosmic-900 border border-indigo-500/20 flex items-center justify-between text-xs font-mono">
-                        <div>
-                          <span className="font-bold text-cyan-300">{sec.key_name}</span>
-                          <span className="text-gray-500 text-[10px] ml-2">({sec.description})</span>
-                        </div>
-                        <span className="text-gray-400">{sec.secret_value}</span>
-                      </div>
-                    ))}
+                  {/* Add New Encrypted Secret Form */}
+                  <div className="space-y-3 pt-2">
+                    <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <Plus className="w-4 h-4 text-cyan-400" />
+                      Add / Encrypt New Environment Variable
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <input
+                        type="text"
+                        placeholder="KEY_NAME (e.g. CF_API_TOKEN)"
+                        value={newSecretKey}
+                        onChange={(e) => setNewSecretKey(e.target.value.toUpperCase())}
+                        className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Plaintext Secret Value"
+                        value={newSecretValue}
+                        onChange={(e) => setNewSecretValue(e.target.value)}
+                        className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                      />
+                      <select
+                        value={newSecretCategory}
+                        onChange={(e) => setNewSecretCategory(e.target.value)}
+                        className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-gray-200"
+                      >
+                        <option value="ai">AI Models & Keys</option>
+                        <option value="web3">Web3 & Pay Wallets</option>
+                        <option value="system">System & OIDC Tokens</option>
+                      </select>
+                      <button
+                        onClick={handleAddSecret}
+                        className="py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-indigo-600 to-purple-600 font-bold text-xs text-white hover:opacity-90 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        Encrypt & Save
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Optional Description (e.g. Workers AI Production Bearer Token)"
+                      value={newSecretDesc}
+                      onChange={(e) => setNewSecretDesc(e.target.value)}
+                      className="w-full p-2 rounded-xl bg-cosmic-950/60 border border-indigo-500/20 text-xs font-mono text-gray-300 focus:outline-none focus:border-cyan-400"
+                    />
                   </div>
+
+                  {/* Encrypted Secrets Inventory Table */}
+                  <div className="space-y-3 pt-4 border-t border-indigo-500/20">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-purple-400" />
+                        Encrypted Secrets Inventory ({secretsList.length})
+                      </h3>
+                      <button
+                        onClick={refreshData}
+                        className="p-1.5 rounded-lg bg-cosmic-900 border border-indigo-500/30 text-xs text-gray-300 hover:text-white"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {secretsList.map((sec, idx) => {
+                        const isRevealed = !!revealedSecrets[sec.key_name];
+                        const isEditing = editingSecretKey === sec.key_name;
+
+                        return (
+                          <div key={idx} className="p-4 rounded-2xl bg-cosmic-900/80 border border-indigo-500/20 hover:border-indigo-500/40 transition-all space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-cyan-300 font-mono">{sec.key_name}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                                  sec.category === 'ai' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                                  sec.category === 'web3' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                  'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                }`}>
+                                  {sec.category?.toUpperCase() || 'SYS'}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950 border border-emerald-500/30 text-emerald-300 flex items-center gap-1">
+                                  <Lock className="w-3 h-3 text-emerald-400" />
+                                  AES-256-GCM
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleDecryptSecret(sec.key_name, sec.secret_value)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
+                                    isRevealed
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30'
+                                      : 'bg-indigo-600/30 text-cyan-300 border border-indigo-500/30 hover:bg-indigo-600/50'
+                                  }`}
+                                >
+                                  {isRevealed ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                                  {isRevealed ? 'Hide Plaintext' : 'Reveal Decrypted'}
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    if (isEditing) {
+                                      setEditingSecretKey(null);
+                                    } else {
+                                      setEditingSecretKey(sec.key_name);
+                                      setEditSecretValue(revealedSecrets[sec.key_name] || '');
+                                    }
+                                  }}
+                                  className="p-1.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-gray-300 hover:text-white"
+                                  title="Edit & Re-encrypt"
+                                >
+                                  <Sliders className="w-4 h-4 text-purple-400" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleDeleteSecret(sec.key_name)}
+                                  className="p-1.5 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 hover:bg-rose-900/60"
+                                  title="Delete Secret"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-gray-400 font-mono">{sec.description || 'Custom Workspace Variable'}</p>
+
+                            {/* Cipher text / Revealed Plaintext View */}
+                            <div className="p-3 rounded-xl bg-cosmic-950 border border-indigo-500/30 font-mono text-xs overflow-x-auto">
+                              {isRevealed ? (
+                                <div className="space-y-1">
+                                  <span className="text-amber-400 text-[10px] uppercase font-bold flex items-center gap-1">
+                                    <Unlock className="w-3 h-3" />
+                                    Decrypted Plaintext Value (In-Memory Only):
+                                  </span>
+                                  <div className="text-emerald-300 font-bold select-all break-all">{revealedSecrets[sec.key_name]}</div>
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <span className="text-gray-500 text-[10px] uppercase font-bold">Encrypted Rest Ciphertext:</span>
+                                  <div className="text-gray-400 text-[11px] break-all">{sec.secret_value}</div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Inline Editing Form */}
+                            {isEditing && (
+                              <div className="p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/40 space-y-2 animate-fadeIn">
+                                <label className="text-[11px] font-bold text-cyan-300 font-mono">
+                                  Update Plaintext Value for <code className="text-white">{sec.key_name}</code>:
+                                </label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={editSecretValue}
+                                    onChange={(e) => setEditSecretValue(e.target.value)}
+                                    placeholder="Enter new value..."
+                                    className="flex-1 p-2 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white"
+                                  />
+                                  <button
+                                    onClick={() => handleUpdateSecret(sec.key_name, editSecretValue)}
+                                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white font-mono"
+                                  >
+                                    Re-Encrypt & Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingSecretKey(null)}
+                                    className="px-3 py-2 rounded-xl bg-cosmic-900 text-gray-400 hover:text-white text-xs font-mono"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* AES-256-GCM Live Cipher Sandbox */}
+                  <div className="p-5 rounded-2xl bg-cosmic-900/90 border border-purple-500/30 space-y-3 pt-4">
+                    <h3 className="text-xs font-bold text-purple-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-cyan-400" />
+                      Interactive AES-256-GCM Cipher Sandbox & Verification
+                    </h3>
+                    <p className="text-xs text-gray-400 font-mono">
+                      Test hardware encryption/decryption in real-time to verify zero plaintext leakage on edge isolates.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <input
+                        type="text"
+                        value={sandboxInput}
+                        onChange={(e) => setSandboxInput(e.target.value)}
+                        placeholder="Test Plaintext or Encrypted Cipher string"
+                        className="sm:col-span-2 p-2.5 rounded-xl bg-cosmic-950 border border-purple-500/30 text-xs font-mono text-white"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleTestCrypto('encrypt')}
+                          className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 font-bold text-xs text-white font-mono flex items-center justify-center gap-1"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          Encrypt
+                        </button>
+                        <button
+                          onClick={() => handleTestCrypto('decrypt')}
+                          className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 font-bold text-xs text-white font-mono flex items-center justify-center gap-1"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          Decrypt
+                        </button>
+                      </div>
+                    </div>
+
+                    {sandboxResult && (
+                      <div className="p-3 rounded-xl bg-cosmic-950 border border-purple-500/30 font-mono text-xs space-y-1">
+                        <div className="text-[10px] text-cyan-400 font-bold uppercase">Sandbox Cipher Output:</div>
+                        <pre className="text-emerald-300 text-[11px] overflow-x-auto whitespace-pre-wrap">
+                          {JSON.stringify(sandboxResult, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
             )}

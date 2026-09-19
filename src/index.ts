@@ -6,6 +6,7 @@ import { handleOpenSpecPlan } from './tools/openspec-plan';
 import { handleReviewKimi } from './tools/review-kimi';
 import { handleAuditCf } from './tools/audit-cf';
 import { handleDesign402 } from './tools/design-402';
+import { encryptSecret, decryptSecret, isEncrypted } from './crypto-utils';
 
 type Bindings = {
   NETWORK?: string;
@@ -91,22 +92,40 @@ let creditLedger: any[] = [
 
 let secretsStore: any[] = [
   {
-    key_name: 'PAY_WALLET',
-    secret_value: '0x71C7...402B89',
-    category: 'web3',
-    description: 'EVM USDC Receiving Vault Address on Base Mainnet'
-  },
-  {
-    key_name: 'OPENAI_API_KEY',
-    secret_value: 'sk-proj-x402...9901',
+    key_name: 'CF_API_TOKEN',
+    secret_value: 'enc:v1:eyJpdiI6WzEyMSwxMTAsMTk4LDgwLDE0MiwxMTksOTEsMTIwLDIwMywxNzUsMTUzLDI0MV0sImN0IjpbMjUzLDI0NCwxNjcsMjQsMTE0LDE0NCwxOTEsMzUsMTQ3LDEwNywyMTEsMTgyLDY5LDEzMyw2MiwzOSwzMiwxODMsMTUsOTgsMzksOTMsMTE0LDIwNSw4NSwxMTgsMjQ3LDIzOCwxOCwxNjMsMTc3LDExMl19',
     category: 'ai',
-    description: 'Upstream LLM Provider Backup Key'
+    description: 'Cloudflare Workers AI API Execution Token',
+    is_encrypted: true,
+    algorithm: 'AES-256-GCM',
+    updated_at: new Date().toISOString()
   },
   {
-    key_name: 'SOLANA_RPC_URL',
-    secret_value: 'https://api.mainnet-beta.solana.com',
+    key_name: 'CF_ACCOUNT_ID',
+    secret_value: 'enc:v1:eyJpdiI6WzEwMiw4OSwyMDEsMTQ0LDExMiw2NywxNTQsMTg4LDcxLDQ1LDEwMCwxMjNdLCJjdCI6WzExMiwyNDEsMTE0LDE5NSwyMiwxODEsMjUzLDIzOSwxMDMsMTQ3LDE2MiwxNDksMTAwLDEwNywxMjMsODJdfQ==',
+    category: 'ai',
+    description: 'Cloudflare Account ID Identifier',
+    is_encrypted: true,
+    algorithm: 'AES-256-GCM',
+    updated_at: new Date().toISOString()
+  },
+  {
+    key_name: 'PAY_WALLET',
+    secret_value: 'enc:v1:eyJpdiI6WzE4LDIwNCwxOSw0NCwxOTUsOTksMTIzLDIwMSwxMTIsNjksMTAwLDEwMV0sImN0IjpbODksOTEsMTI3LDI0MSwxNTUsMTg0LDE2OCwyMjIsOTAsMTgsNjksMTgwLDE5OCwxNjYsMTIxLDI0NywxNSwxMjgsMjM5LDExNCwxOSw4NywxODIsMTIwLDE0MSwxMjIsMTAxLDE3OCwxOTEsMTU0LDE5MywyMTMsMTEzLDk4LDk5XX0=',
     category: 'web3',
-    description: 'Solana Network RPC Endpoint'
+    description: 'EVM USDC Receiving Vault Address on Base Mainnet',
+    is_encrypted: true,
+    algorithm: 'AES-256-GCM',
+    updated_at: new Date().toISOString()
+  },
+  {
+    key_name: 'JWT_SECRET',
+    secret_value: 'enc:v1:eyJpdiI6WzY2LDE3MCwyMDIsMjMsODIsMjMsMTY1LDkwLDc3LDY1LDE0OCwxNDldLCJjdCI6WzE0OSwxNTgsMTI2LDIzNSwxOTgsMjQsODMsMTQ1LDEyMywxOTAsMTcyLDQ4LDE0NCwyMDMsMjE2LDE1NywxODMsNDgsODgsMjIxLDM3LDI0NSwxNzUsODQsMTIsOTQsOTQsNjEsMjUsMTMxLDE5NCwxNjksMzIsNzcsNjQsMTE2XX0=',
+    category: 'system',
+    description: 'Grant Token & HMAC Signing Master Key',
+    is_encrypted: true,
+    algorithm: 'AES-256-GCM',
+    updated_at: new Date().toISOString()
   }
 ];
 
@@ -553,18 +572,74 @@ app.get('/api/secrets', (c) => c.json(secretsStore));
 
 app.post('/api/secrets', async (c) => {
   const body = await c.req.json();
-  const existingIndex = secretsStore.findIndex(s => s.key_name === body.key_name);
-  if (existingIndex >= 0) {
-    secretsStore[existingIndex] = { ...secretsStore[existingIndex], ...body };
-  } else {
-    secretsStore.push({
-      key_name: body.key_name,
-      secret_value: body.secret_value,
-      category: body.category || 'web3',
-      description: body.description || ''
-    });
+  const passphrase = body.passphrase || 'aifoundry-master-vault-2026';
+  
+  let valToStore = body.secret_value || '';
+  if (valToStore && !isEncrypted(valToStore)) {
+    valToStore = await encryptSecret(valToStore, passphrase);
   }
-  return c.json({ success: true, key_name: body.key_name });
+
+  const existingIndex = secretsStore.findIndex(s => s.key_name === body.key_name);
+  const updatedObj = {
+    key_name: body.key_name,
+    secret_value: valToStore,
+    category: body.category || 'ai',
+    description: body.description || 'Custom Gateway Secret',
+    is_encrypted: true,
+    algorithm: 'AES-256-GCM',
+    updated_at: new Date().toISOString()
+  };
+
+  if (existingIndex >= 0) {
+    secretsStore[existingIndex] = { ...secretsStore[existingIndex], ...updatedObj };
+  } else {
+    secretsStore.push(updatedObj);
+  }
+  return c.json({ success: true, key_name: body.key_name, is_encrypted: true, algorithm: 'AES-256-GCM' });
+});
+
+app.post('/api/secrets/decrypt', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { key_name, secret_value, passphrase } = body;
+    let targetCipher = secret_value;
+    
+    if (key_name && !targetCipher) {
+      const found = secretsStore.find(s => s.key_name === key_name);
+      if (found) targetCipher = found.secret_value;
+    }
+
+    if (!targetCipher) {
+      return c.json({ error: 'No cipher text or key provided' }, 400);
+    }
+
+    if (!isEncrypted(targetCipher)) {
+      return c.json({ plaintext: targetCipher, is_encrypted: false });
+    }
+
+    const plaintext = await decryptSecret(targetCipher, passphrase || 'aifoundry-master-vault-2026');
+    return c.json({ success: true, key_name, plaintext, algorithm: 'AES-256-GCM' });
+  } catch (err: any) {
+    return c.json({ error: 'Decryption failed. Invalid passphrase or corrupted cipher payload.', details: err.message }, 401);
+  }
+});
+
+app.post('/api/secrets/test-crypto', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { plaintext, passphrase, action } = body;
+    const key = passphrase || 'aifoundry-master-vault-2026';
+
+    if (action === 'encrypt') {
+      const encrypted = await encryptSecret(plaintext, key);
+      return c.json({ success: true, action: 'encrypt', plaintext, encrypted, algorithm: 'AES-256-GCM' });
+    } else {
+      const decrypted = await decryptSecret(plaintext, key);
+      return c.json({ success: true, action: 'decrypt', ciphertext: plaintext, decrypted, algorithm: 'AES-256-GCM' });
+    }
+  } catch (err: any) {
+    return c.json({ error: 'Crypto operation failed.', details: err.message }, 400);
+  }
 });
 
 app.delete('/api/secrets/:keyName', (c) => {

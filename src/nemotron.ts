@@ -1,5 +1,6 @@
 // Workers AI & DeepSeek / Nemotron AI Model Adapter for x402 AIFoundry.sh
 // Calls Cloudflare Workers AI natively via TypeScript bindings (`env.AI`) with ZERO external OpenAI API key costs.
+import { decryptSecret, isEncrypted } from './crypto-utils';
 
 export interface NemotronRequest {
   prompt?: string;
@@ -66,8 +67,26 @@ export async function runNemotron(
   }
 
   // Option B: Native Cloudflare Workers AI TypeScript Binding (`env.AI`) or Cloudflare API Token REST Endpoint
-  const cfToken = env?.CF_API_TOKEN || env?.CLOUDFLARE_API_TOKEN || env?.AI_API_TOKEN || env?.CF_TOKEN || env?.CLOUDFLARE_TOKEN;
-  const cfAccountId = env?.CF_ACCOUNT_ID || env?.CLOUDFLARE_ACCOUNT_ID || env?.ACCOUNT_ID;
+  let rawCfToken = env?.CF_API_TOKEN || env?.CLOUDFLARE_API_TOKEN || env?.AI_API_TOKEN || env?.CF_TOKEN || env?.CLOUDFLARE_TOKEN;
+  let rawCfAccountId = env?.CF_ACCOUNT_ID || env?.CLOUDFLARE_ACCOUNT_ID || env?.ACCOUNT_ID;
+
+  if (rawCfToken && isEncrypted(rawCfToken)) {
+    try {
+      rawCfToken = await decryptSecret(rawCfToken, env?.ENCRYPTION_PASSPHRASE);
+    } catch (e) {
+      console.warn('Failed to decrypt CF_API_TOKEN:', e);
+    }
+  }
+  if (rawCfAccountId && isEncrypted(rawCfAccountId)) {
+    try {
+      rawCfAccountId = await decryptSecret(rawCfAccountId, env?.ENCRYPTION_PASSPHRASE);
+    } catch (e) {
+      console.warn('Failed to decrypt CF_ACCOUNT_ID:', e);
+    }
+  }
+
+  const cfToken = rawCfToken;
+  const cfAccountId = rawCfAccountId;
 
   // B1. Native Binding via env.AI
   if (env?.AI) {
