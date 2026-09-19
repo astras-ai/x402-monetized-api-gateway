@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>x402 Monetized API Gateway & Developer Portal</title>
+  <title>AIFoundry.sh | x402 Monetized Edge Gateway & Security Agent</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,20 +16,47 @@
             brand: {
               50: '#eef2ff',
               100: '#e0e7ff',
+              400: '#818cf8',
               500: '#6366f1',
               600: '#4f46e5',
               700: '#4338ca',
             },
-            dark: {
-              canvas: '#0b0f19',
-              surface: '#111827',
-              elevated: '#1f2937',
-              border: '#374151'
+            cyan: {
+              400: '#22d3ee',
+              500: '#06b6d4',
+            },
+            cosmic: {
+              950: '#030712',
+              900: '#060b19',
+              850: '#0a1024',
+              800: '#0e1738',
+              700: '#172554',
+              border: 'rgba(99, 102, 241, 0.25)',
+              glow: 'rgba(34, 211, 238, 0.15)'
             }
           },
           fontFamily: {
             sans: ['Inter', 'system-ui', 'sans-serif'],
             mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          },
+          animation: {
+            'tesseract-rotate': 'tesseractRotate 12s linear infinite',
+            'quantum-pulse': 'quantumPulse 4s ease-in-out infinite',
+            'nebula-float': 'nebulaFloat 18s ease-in-out infinite',
+          },
+          keyframes: {
+            tesseractRotate: {
+              '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+              '100%': { transform: 'rotateX(360deg) rotateY(360deg) rotateZ(360deg)' },
+            },
+            quantumPulse: {
+              '0%, 100%': { opacity: '0.4', filter: 'drop-shadow(0 0 10px rgba(34,211,238,0.4))' },
+              '50%': { opacity: '0.9', filter: 'drop-shadow(0 0 25px rgba(99,102,241,0.8))' },
+            },
+            nebulaFloat: {
+              '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+              '50%': { transform: 'translate(20px, -20px) scale(1.1)' },
+            }
           }
         }
       }
@@ -40,9 +67,20 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     body {
-      background-color: #0b0f19;
+      background-color: #030712;
       color: #f3f4f6;
       font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Cosmic Grid Background */
+    .cosmic-grid {
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
     }
 
     /* Custom scrollbar */
@@ -51,18 +89,30 @@
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #0b0f19;
+      background: #030712;
     }
     ::-webkit-scrollbar-thumb {
-      background: #374151;
+      background: #1e293b;
       border-radius: 3px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #4b5563;
+      background: #334155;
     }
 
-    .pulse-glow {
-      box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+    .glass-panel {
+      background: rgba(10, 16, 36, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+    .glass-panel-glow {
+      background: rgba(10, 16, 36, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.12), inset 0 0 15px rgba(99, 102, 241, 0.08);
+    }
+
+    .cyan-text-glow {
+      text-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
     }
   </style>
 
@@ -82,7 +132,7 @@
   <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="min-h-screen bg-[#0b0f19] text-gray-100 antialiased selection:bg-indigo-500 selection:text-white">
+<body class="min-h-screen cosmic-grid bg-[#030712] text-gray-100 antialiased selection:bg-cyan-500 selection:text-black">
   <div id="root"></div>
 
   <!-- Main React Frontend Script -->
