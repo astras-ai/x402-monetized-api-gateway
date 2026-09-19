@@ -182,27 +182,49 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 app.use('*', cors({
   origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
   allowHeaders: [
     'Content-Type',
     'Authorization',
+    'authorization',
     'X-402-Payment',
+    'x-402-payment',
     'X-402-Paid',
+    'x-402-paid',
     'X-USDC-Tx',
+    'x-usdc-tx',
     'X-Payment-Header',
+    'x-payment-header',
+    'X-Payment-Hash',
+    'x-payment-hash',
     'X-CF-Token',
-    'X-CF-Account-Id'
+    'x-cf-token',
+    'X-CF-Account-Id',
+    'x-cf-account-id',
+    'X-API-Key',
+    'x-api-key',
+    'x-key',
+    'key',
+    'api-key'
   ],
   exposeHeaders: [
     'X-402-Payment-Required',
     'X-402-Price-USD',
     'X-402-Pay-To',
-    'WWW-Authenticate'
+    'WWW-Authenticate',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Methods',
+    'Access-Control-Allow-Headers'
   ]
 }));
 
+// OPTIONS Preflight Handler for all routes (Prevents 405 Method Not Allowed on CORS preflights)
+app.options('*', (c) => {
+  return c.text('', 204);
+});
+
 // Health Check
-app.get('/health', (c) => {
+app.all('/health', (c) => {
   return c.json({
     status: 'ok',
     gateway: 'AIFoundry.sh x402 Gateway',
@@ -213,7 +235,7 @@ app.get('/health', (c) => {
 });
 
 // Machine-Readable x402 Protocol Manifest for AI Agents
-app.get('/llms.txt', async (c) => {
+app.all('/llms.txt', async (c) => {
   if (c.env.ASSETS) {
     try {
       const res = await c.env.ASSETS.fetch(c.req.raw);
@@ -245,9 +267,9 @@ Multi-Chain Treasury Vaults:
 `, 200, { 'Content-Type': 'text/plain; charset=utf-8' });
 });
 
-app.get('/llms-full.txt', (c) => c.redirect('/llms.txt'));
+app.all('/llms-full.txt', (c) => c.redirect('/llms.txt'));
 
-app.get('/.well-known/x402', (c) => {
+app.all('/.well-known/x402', (c) => {
   const payTo = c.env.PAY_TO || '0x003cC678764C8143a4b92370acB40e3B41319016';
   const network = c.env.NETWORK || 'base';
 
@@ -266,7 +288,7 @@ app.get('/.well-known/x402', (c) => {
 });
 
 // Tool Catalog Endpoint
-app.get('/v1/tools', (c) => {
+app.all('/v1/tools', (c) => {
   return c.json({
     gateway: 'AIFoundry.sh x402 AI Gateway',
     price_per_call_usd: 0.05,
@@ -277,7 +299,7 @@ app.get('/v1/tools', (c) => {
 });
 
 // Multi-Chain Treasury Vaults Endpoint
-app.get('/v1/vaults', (c) => {
+app.all('/v1/vaults', (c) => {
   return c.json({
     status: 'ok',
     primary_beneficiary: '0x003cC678764C8143a4b92370acB40e3B41319016',
@@ -286,7 +308,7 @@ app.get('/v1/vaults', (c) => {
 });
 
 // Token & Time Plan Endpoint (Calculates Max Allowed Tokens & Quota for Prepaid Payments)
-app.get('/v1/plan', (c) => {
+app.all('/v1/plan', (c) => {
   const depositUsd = parseFloat(c.req.query('deposit_usd') || '0.05');
   const windowMinutes = parseInt(c.req.query('window_minutes') || '60', 10);
   
@@ -407,13 +429,13 @@ const handleReportRequest = async (c: any) => {
   });
 };
 
-app.on(['GET', 'POST'], '/v1/report', handleReportRequest);
-app.on(['GET', 'POST'], '/v1/reports', handleReportRequest);
-app.on(['GET', 'POST'], '/v1/receipts', handleReportRequest);
-app.on(['GET', 'POST'], '/v1/analytics', handleReportRequest);
-app.on(['GET', 'POST'], '/api/report', handleReportRequest);
+app.all('/v1/report', handleReportRequest);
+app.all('/v1/reports', handleReportRequest);
+app.all('/v1/receipts', handleReportRequest);
+app.all('/v1/analytics', handleReportRequest);
+app.all('/api/report', handleReportRequest);
 
-app.get('/api/networks', (c) => c.json(NETWORK_REGISTRY));
+app.all('/api/networks', (c) => c.json(NETWORK_REGISTRY));
 
 app.onError((err, c) => {
   console.error('Gateway Global Error:', err);
@@ -496,7 +518,14 @@ async function parseRequestBody(c: any): Promise<any> {
 }
 
 // Direct OpenAI SDK & AI Agent Chat Completion Compatibility Endpoint
-app.on(['GET', 'POST'], ['/v1/chat/completions', '/chat/completions'], async (c) => {
+app.all('/v1/chat/completions', async (c) => {
+  return handleChatCompletions(c);
+});
+app.all('/chat/completions', async (c) => {
+  return handleChatCompletions(c);
+});
+
+async function handleChatCompletions(c: any) {
   const network = c.req.query('network') || c.env.NETWORK || 'base';
   const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
   const payTo = c.env.PAY_TO || networkConfig.payTo || '0x003cC678764C8143a4b92370acB40e3B41319016';
@@ -610,8 +639,8 @@ app.on(['GET', 'POST'], ['/v1/chat/completions', '/chat/completions'], async (c)
   }
 });
 
-// Direct x402 Tool Execution (Supports GET and POST)
-app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
+// Direct x402 Tool Execution (Supports ALL HTTP methods: GET, POST, OPTIONS, PUT, HEAD)
+app.all('/v1/tools/:toolName', async (c) => {
   const toolName = c.req.param('toolName');
   const network = c.req.query('network') || c.env.NETWORK || 'base';
   const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
@@ -753,7 +782,7 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
 });
 
 // App & Static Asset Serving
-app.get('*', async (c) => {
+app.all('*', async (c) => {
   if (c.req.path.startsWith('/v1/') || c.req.path.startsWith('/api/')) {
     return c.json({ error: 'Endpoint not found', path: c.req.path }, 404);
   }
