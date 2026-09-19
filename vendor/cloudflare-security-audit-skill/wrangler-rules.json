@@ -1,0 +1,24 @@
+{
+  "repo": "cloudflare/security-audit-skill",
+  "version": "1.8.2",
+  "audit_checks": [
+    {
+      "check_id": "CF-SEC-01",
+      "title": "Exposed Secrets in Plaintext Vars",
+      "description": "Verifies that JWT_SECRET, PAY_TO, and API keys are stored in Wrangler Secrets, not in wrangler.json vars block.",
+      "weight": 40
+    },
+    {
+      "check_id": "CF-SEC-02",
+      "title": "Tutorial / Default Public Wallet Addresses",
+      "description": "Ensures developers do not deploy testnet addresses like 0x71C7... in mainnet configuration.",
+      "weight": 40
+    },
+    {
+      "check_id": "CF-SEC-03",
+      "title": "Compatibility Date & Isolate Standards",
+      "description": "Validates Cloudflare Worker runtime compatibility date is active and modern.",
+      "weight": 20
+    }
+  ]
+}
