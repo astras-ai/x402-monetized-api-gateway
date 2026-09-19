@@ -116,15 +116,6 @@ const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: strin
     usdc: 'Native USDC',
     payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
     isTestnet: false
-  }
-};
-  },
-  'aptos': {
-    name: 'Aptos Mainnet',
-    chainId: 1,
-    usdc: '0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b',
-    payTo: '0x2d041406ed1f2240872394b6d7a3471b7a23ceef116755bbc695f9e496cd3ce4',
-    isTestnet: false
   },
   'base-sepolia': {
     name: 'Base Sepolia Testnet',
