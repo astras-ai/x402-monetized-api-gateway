@@ -128,38 +128,69 @@ export function App() {
     }
   };
 
-  const toolDetails = {
-    'openspec.plan': {
-      title: 'OpenSpec Software Architecture Generator',
-      price: '$0.05 USDC',
-      desc: 'Generates software dev plans, tech stacks, and team persona architectures.',
-      provider: 'Fission AI OpenSpec + DeepSeek R1'
+  // Unit Economics Data
+  const unitEconomics = [
+    {
+      tool: 'openspec.plan (DeepSeek R1 Architecture)',
+      sku: 'T10K ($0.05 base)',
+      inputCap: '10,000 tokens',
+      outputCap: '10,000 tokens',
+      upstreamVendorCost: '$0.0070 (DeepSeek R1 $0.55/M in, $2.19/M out)',
+      cloudflareEdgeCost: '$0.0005 (Worker Isolate CPU time)',
+      totalCOGS: '$0.0075',
+      listPrice: '$0.0500',
+      profitPerCall: '+$0.0425',
+      marginPct: '85.0% Gross Margin (6.6x COGS)'
     },
-    'review.kimi': {
-      title: 'Alibaba Open Code Review (Kimi)',
-      price: '$0.05 USDC',
-      desc: 'AST code review with exact token receipt metering and security checks.',
-      provider: 'Alibaba Open Code Review'
+    {
+      tool: 'review.kimi (Alibaba Open Code Review)',
+      sku: 'T10K ($0.05 base)',
+      inputCap: '10,000 tokens',
+      outputCap: '10,000 tokens',
+      upstreamVendorCost: '$0.0090 (Kimi AST Tokenizer + LLM)',
+      cloudflareEdgeCost: '$0.0005 (Worker Isolate CPU time)',
+      totalCOGS: '$0.0095',
+      listPrice: '$0.0500',
+      profitPerCall: '+$0.0405',
+      marginPct: '81.0% Gross Margin (5.2x COGS)'
     },
-    'audit.cf': {
-      title: 'Cloudflare Workers Security Audit',
-      price: '$0.05 USDC',
-      desc: 'Scans Wrangler configs & Worker code for exposed keys and x402 compliance.',
-      provider: 'Cloudflare Security Audit Skill'
+    {
+      tool: 'audit.cf (Cloudflare Security Audit Skill)',
+      sku: 'M10 ($0.05 base)',
+      inputCap: '10 min wall-clock',
+      outputCap: 'Security Report',
+      upstreamVendorCost: '$0.0030 (Rule Engine AST Parser)',
+      cloudflareEdgeCost: '$0.0010 (Subrequest & CPU time)',
+      totalCOGS: '$0.0040',
+      listPrice: '$0.0500',
+      profitPerCall: '+$0.0460',
+      marginPct: '92.0% Gross Margin (12.5x COGS)'
     },
-    'design.402': {
-      title: 'OpenDesign UI Spec Generator',
-      price: '$0.05 USDC',
-      desc: 'Generates tailwind design tokens, component trees, and layout specs.',
-      provider: 'OpenDesign DeepSeek'
+    {
+      tool: 'design.402 (OpenDesign UI Spec Engine)',
+      sku: 'T10K ($0.05 base)',
+      inputCap: '10,000 tokens',
+      outputCap: '10,000 tokens',
+      upstreamVendorCost: '$0.0060 (OpenDesign Model)',
+      cloudflareEdgeCost: '$0.0005 (Worker Isolate CPU time)',
+      totalCOGS: '$0.0065',
+      listPrice: '$0.0500',
+      profitPerCall: '+$0.0435',
+      marginPct: '87.0% Gross Margin (7.7x COGS)'
     },
-    'nemotron.chat': {
-      title: 'Workers AI Edge Model Chat',
-      price: '$0.05 USDC',
-      desc: 'Sub-20ms direct edge LLM inference for autonomous AI agent pipelines.',
-      provider: 'Cloudflare Workers AI'
+    {
+      tool: 'nemotron.chat (Workers AI Edge LLM)',
+      sku: 'T10K ($0.05 base)',
+      inputCap: '10,000 tokens',
+      outputCap: '10,000 tokens',
+      upstreamVendorCost: '$0.0020 (Cloudflare Workers AI Neurons)',
+      cloudflareEdgeCost: '$0.0005 (Worker Isolate CPU time)',
+      totalCOGS: '$0.0025',
+      listPrice: '$0.0500',
+      profitPerCall: '+$0.0475',
+      marginPct: '95.0% Gross Margin (20.0x COGS)'
     }
-  };
+  ];
 
   const rolesData = [
     {
@@ -754,35 +785,47 @@ export function App() {
               </div>
             </div>
 
-            {/* Pricing Table */}
+            {/* Granular Per-Tool Unit Economics Table */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-              <h3 className="font-bold text-sm text-slate-200">SKU Pricing & Cost Comparison</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-200">Per-Tool Unit Economics & Profit Margins</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Every call is priced at $0.0500 USDC ($50,000 micro-USDC). Upstream costs include LLM vendor tokens + Cloudflare Worker CPU compute.</p>
+                </div>
+                <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-xs font-mono font-bold">
+                  Avg. Gross Margin: 88.0%
+                </span>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase font-mono">
                     <tr>
-                      <th className="p-3">SKU</th>
+                      <th className="p-3">AI Edge Tool</th>
                       <th className="p-3">List Price</th>
-                      <th className="p-3">Execution Budget</th>
-                      <th className="p-3">Upstream Cost</th>
-                      <th className="p-3">Gross Margin</th>
+                      <th className="p-3">Upstream LLM Cost</th>
+                      <th className="p-3">CF Edge Cost</th>
+                      <th className="p-3">Total COGS</th>
+                      <th className="p-3">Net Profit / Call</th>
+                      <th className="p-3">Gross Margin %</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    <tr>
-                      <td className="p-3 font-bold text-cyan-300 font-mono">T10K</td>
-                      <td className="p-3 font-semibold text-emerald-400">$0.05 USDC</td>
-                      <td className="p-3 text-slate-300">10,000 Input / 10,000 Output tokens</td>
-                      <td className="p-3 text-slate-400">~$0.015</td>
-                      <td className="p-3 font-bold text-emerald-400">70% Margin (3.3x COGS)</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-bold text-indigo-300 font-mono">M10</td>
-                      <td className="p-3 font-semibold text-emerald-400">$0.05 USDC</td>
-                      <td className="p-3 text-slate-300">10 Minutes Wall-Clock Edge Isolate</td>
-                      <td className="p-3 text-slate-400">~$0.010</td>
-                      <td className="p-3 font-bold text-emerald-400">80% Margin (5x COGS)</td>
-                    </tr>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {unitEconomics.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-950/40">
+                        <td className="p-3 font-bold text-slate-200 font-sans">{item.tool}</td>
+                        <td className="p-3 font-semibold text-cyan-300">{item.listPrice}</td>
+                        <td className="p-3 text-slate-400">{item.upstreamVendorCost}</td>
+                        <td className="p-3 text-slate-400">{item.cloudflareEdgeCost}</td>
+                        <td className="p-3 text-rose-300 font-semibold">{item.totalCOGS}</td>
+                        <td className="p-3 text-emerald-400 font-extrabold">{item.profitPerCall}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 text-[11px]">
+                            {item.marginPct}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
