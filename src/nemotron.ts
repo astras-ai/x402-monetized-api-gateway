@@ -14,6 +14,9 @@ export interface NemotronRequest {
   max_tokens?: number;
   temperature?: number;
   api_key?: string;
+  openai_key?: string;
+  deepseek_key?: string;
+  openrouter_key?: string;
   cf_token?: string;
   cf_account_id?: string;
   system_prompt?: string;
@@ -66,7 +69,7 @@ export function extractPromptFromBody(req: any): { promptText: string; systemPro
 }
 
 async function getCfAccountId(cfToken: string, providedId?: string): Promise<string> {
-  if (providedId && providedId !== 'me') return providedId;
+  if (providedId && providedId !== 'me' && providedId.trim().length > 5) return providedId.trim();
   try {
     const res = await fetch('https://api.cloudflare.com/client/v4/accounts', {
       headers: { Authorization: `Bearer ${cfToken}` }
@@ -79,7 +82,7 @@ async function getCfAccountId(cfToken: string, providedId?: string): Promise<str
   } catch (e) {
     console.warn('Failed to auto-discover Cloudflare Account ID:', e);
   }
-  return providedId || 'me';
+  return providedId || '';
 }
 
 export async function runNemotron(
@@ -89,148 +92,50 @@ export async function runNemotron(
 ): Promise<NemotronResponse> {
   const { promptText, systemPrompt } = extractPromptFromBody(req);
 
-  // Extract keys from request body override or env bindings
-  let apiKey = req.api_key || env?.API_KEY || env?.OPENAI_API_KEY || env?.DEEPSEEK_API_KEY || env?.OPENROUTER_API_KEY;
-  let rawCfToken = req.cf_token || env?.CF_API_TOKEN || env?.CLOUDFLARE_API_TOKEN || env?.AI_API_TOKEN || env?.CF_TOKEN || env?.CLOUDFLARE_TOKEN;
-  let rawCfAccountId = req.cf_account_id || env?.CF_ACCOUNT_ID || env?.CLOUDFLARE_ACCOUNT_ID || env?.ACCOUNT_ID;
+  // Extract key candidates from request body override or env bindings
+  let userKey =
+    req.api_key ||
+    req.openai_key ||
+    req.deepseek_key ||
+    req.openrouter_key ||
+    env?.API_KEY ||
+    env?.OPENAI_API_KEY ||
+    env?.DEEPSEEK_API_KEY ||
+    env?.OPENROUTER_API_KEY;
 
-  if (rawCfToken && isEncrypted(rawCfToken)) {
-    try {
-      rawCfToken = await decryptSecret(rawCfToken, env?.ENCRYPTION_PASSPHRASE);
-    } catch (e) {
-      console.warn('Failed to decrypt CF_API_TOKEN:', e);
-    }
+  let cfToken =
+    req.cf_token ||
+    env?.CF_API_TOKEN ||
+    env?.CLOUDFLARE_API_TOKEN ||
+    env?.AI_API_TOKEN ||
+    env?.CF_TOKEN ||
+    env?.CLOUDFLARE_TOKEN;
+
+  let rawCfAccountId =
+    req.cf_account_id ||
+    env?.CF_ACCOUNT_ID ||
+    env?.CLOUDFLARE_ACCOUNT_ID ||
+    env?.ACCOUNT_ID;
+
+  if (userKey && isEncrypted(userKey)) {
+    try { userKey = await decryptSecret(userKey, env?.ENCRYPTION_PASSPHRASE); } catch (e) {}
+  }
+  if (cfToken && isEncrypted(cfToken)) {
+    try { cfToken = await decryptSecret(cfToken, env?.ENCRYPTION_PASSPHRASE); } catch (e) {}
   }
   if (rawCfAccountId && isEncrypted(rawCfAccountId)) {
-    try {
-      rawCfAccountId = await decryptSecret(rawCfAccountId, env?.ENCRYPTION_PASSPHRASE);
-    } catch (e) {
-      console.warn('Failed to decrypt CF_ACCOUNT_ID:', e);
-    }
+    try { rawCfAccountId = await decryptSecret(rawCfAccountId, env?.ENCRYPTION_PASSPHRASE); } catch (e) {}
   }
 
-  const cfToken = rawCfToken;
-
-  // --- Provider 1: OpenRouter API ---
-  if (apiKey && (apiKey.startsWith('sk-or-') || env?.OPENROUTER_API_KEY)) {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://gateway.aifoundry.sh',
-          'X-Title': 'AIFoundry.sh x402 Gateway'
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-r1:free',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: promptText }
-          ],
-          max_tokens: req.max_tokens || 1024,
-          temperature: req.temperature || 0.7
-        })
-      });
-
-      if (response.ok) {
-        const data: any = await response.json();
-        const output = data.choices?.[0]?.message?.content;
-        if (output && output.trim()) {
-          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
-          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
-          return {
-            result: output,
-            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
-            model: data.model || 'deepseek/deepseek-r1:free',
-            provider: 'openrouter'
-          };
-        }
-      }
-    } catch (e) {
-      console.warn('OpenRouter API call failed, trying next provider:', e);
-    }
+  // If cfToken wasn't passed separately, check if userKey acts as cfToken
+  if (!cfToken && userKey && !userKey.startsWith('sk-') && !userKey.startsWith('ds-')) {
+    cfToken = userKey;
   }
 
-  // --- Provider 2: DeepSeek API ---
-  if (apiKey && (apiKey.startsWith('ds-') || env?.DEEPSEEK_API_KEY)) {
-    try {
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: promptText }
-          ],
-          max_tokens: req.max_tokens || 1024,
-          temperature: req.temperature || 0.7
-        })
-      });
+  const maxTokens = req.max_tokens || 1024;
+  const temperature = req.temperature || 0.7;
 
-      if (response.ok) {
-        const data: any = await response.json();
-        const output = data.choices?.[0]?.message?.content;
-        if (output && output.trim()) {
-          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
-          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
-          return {
-            result: output,
-            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
-            model: 'deepseek-chat',
-            provider: 'deepseek'
-          };
-        }
-      }
-    } catch (e) {
-      console.warn('DeepSeek API call failed, trying OpenAI / Workers AI:', e);
-    }
-  }
-
-  // --- Provider 3: OpenAI API ---
-  if (apiKey && (apiKey.startsWith('sk-') || env?.OPENAI_API_KEY)) {
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: promptText }
-          ],
-          max_tokens: req.max_tokens || 1024,
-          temperature: req.temperature || 0.7
-        })
-      });
-
-      if (response.ok) {
-        const data: any = await response.json();
-        const output = data.choices?.[0]?.message?.content;
-        if (output && output.trim()) {
-          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
-          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
-          return {
-            result: output,
-            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
-            model: 'gpt-4o-mini',
-            provider: 'openai'
-          };
-        }
-      }
-    } catch (e) {
-      console.warn('OpenAI API call failed, falling back to Workers AI:', e);
-    }
-  }
-
-  // --- Provider 4: Native Cloudflare Workers AI Binding (`env.AI`) ---
+  // --- Provider Candidate 1: Native Cloudflare Workers AI Binding (`env.AI`) ---
   if (env?.AI) {
     const candidateModels = [
       '@cf/meta/llama-3.1-8b-instruct',
@@ -246,7 +151,7 @@ export async function runNemotron(
             { role: 'system', content: systemPrompt },
             { role: 'user', content: promptText }
           ],
-          max_tokens: req.max_tokens || 1024
+          max_tokens: maxTokens
         });
 
         let responseText = '';
@@ -276,23 +181,177 @@ export async function runNemotron(
     }
   }
 
-  // --- Provider 5: Direct Cloudflare Workers AI REST API using CF_API_TOKEN ---
-  if (cfToken) {
-    const resolvedAccountId = await getCfAccountId(cfToken, rawCfAccountId);
-    const candidateModels = [
+  // Define HTTP Provider Call Helpers
+  const tryOpenAI = async (key: string): Promise<NemotronResponse | null> => {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: promptText }
+          ],
+          max_tokens: maxTokens,
+          temperature
+        })
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const output = data.choices?.[0]?.message?.content;
+        if (output && output.trim()) {
+          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
+          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
+          return {
+            result: output,
+            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+            model: data.model || 'gpt-4o-mini',
+            provider: 'openai'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('OpenAI fetch error:', e);
+    }
+    return null;
+  };
+
+  const tryDeepSeek = async (key: string): Promise<NemotronResponse | null> => {
+    try {
+      const res = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: promptText }
+          ],
+          max_tokens: maxTokens,
+          temperature
+        })
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const output = data.choices?.[0]?.message?.content;
+        if (output && output.trim()) {
+          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
+          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
+          return {
+            result: output,
+            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+            model: 'deepseek-chat',
+            provider: 'deepseek'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('DeepSeek fetch error:', e);
+    }
+    return null;
+  };
+
+  const tryOpenRouter = async (key: string): Promise<NemotronResponse | null> => {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+          'HTTP-Referer': 'https://gateway.aifoundry.sh',
+          'X-Title': 'AIFoundry.sh x402 Gateway'
+        },
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-r1:free',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: promptText }
+          ],
+          max_tokens: maxTokens,
+          temperature
+        })
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const output = data.choices?.[0]?.message?.content;
+        if (output && output.trim()) {
+          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
+          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
+          return {
+            result: output,
+            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+            model: data.model || 'deepseek/deepseek-r1:free',
+            provider: 'openrouter'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('OpenRouter fetch error:', e);
+    }
+    return null;
+  };
+
+  const tryCloudflareRest = async (token: string, accountId?: string): Promise<NemotronResponse | null> => {
+    const resolvedAccountId = await getCfAccountId(token, accountId);
+    if (!resolvedAccountId) return null;
+
+    const models = [
       '@cf/meta/llama-3.1-8b-instruct',
       '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
-      '@cf/meta/llama-3.3-70b-instruct',
-      '@cf/nvidia/nemotron-3-120b-a12b'
+      '@cf/meta/llama-3.3-70b-instruct'
     ];
 
-    for (const modelName of candidateModels) {
+    // Try OpenAI-compatible endpoint first
+    try {
+      const cfOpenAiUrl = `https://api.cloudflare.com/client/v4/accounts/${resolvedAccountId}/ai/v1/chat/completions`;
+      const res = await fetch(cfOpenAiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: '@cf/meta/llama-3.1-8b-instruct',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: promptText }
+          ],
+          max_tokens: maxTokens
+        })
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const output = data.choices?.[0]?.message?.content;
+        if (output && output.trim()) {
+          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
+          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
+          return {
+            result: output,
+            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+            model: data.model || '@cf/meta/llama-3.1-8b-instruct',
+            provider: 'workers_ai'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Cloudflare Workers AI OpenAI-compatible endpoint failed:', e);
+    }
+
+    // Fall back to direct /ai/run/${model} endpoint
+    for (const modelName of models) {
       try {
         const cfAiUrl = `https://api.cloudflare.com/client/v4/accounts/${resolvedAccountId}/ai/run/${modelName}`;
-        const response = await fetch(cfAiUrl, {
+        const res = await fetch(cfAiUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${cfToken}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -300,12 +359,12 @@ export async function runNemotron(
               { role: 'system', content: systemPrompt },
               { role: 'user', content: promptText }
             ],
-            max_tokens: req.max_tokens || 1024
+            max_tokens: maxTokens
           })
         });
 
-        if (response.ok) {
-          const data: any = await response.json();
+        if (res.ok) {
+          const data: any = await res.json();
           const responseText = data?.result?.response || (typeof data?.result === 'string' ? data.result : null);
           if (responseText && responseText.trim()) {
             const pTokens = Math.ceil(promptText.length / 4);
@@ -319,12 +378,41 @@ export async function runNemotron(
           }
         }
       } catch (e) {
-        console.warn(`Cloudflare API Token call for ${modelName} failed:`, e);
+        console.warn(`Cloudflare REST AI run ${modelName} failed:`, e);
       }
+    }
+    return null;
+  };
+
+  // Execute providers based on key signatures and fallback order
+  if (userKey) {
+    if (userKey.startsWith('sk-or-')) {
+      const res = (await tryOpenRouter(userKey)) || (await tryDeepSeek(userKey)) || (await tryOpenAI(userKey));
+      if (res) return res;
+    } else if (userKey.startsWith('ds-')) {
+      const res = (await tryDeepSeek(userKey)) || (await tryOpenAI(userKey)) || (await tryOpenRouter(userKey));
+      if (res) return res;
+    } else if (userKey.startsWith('sk-')) {
+      // Could be OpenAI, DeepSeek, or OpenRouter
+      const res = (await tryOpenAI(userKey)) || (await tryDeepSeek(userKey)) || (await tryOpenRouter(userKey));
+      if (res) return res;
+    } else {
+      // General key / token
+      const res =
+        (await tryCloudflareRest(userKey, rawCfAccountId)) ||
+        (await tryOpenAI(userKey)) ||
+        (await tryDeepSeek(userKey)) ||
+        (await tryOpenRouter(userKey));
+      if (res) return res;
     }
   }
 
-  // --- Provider 6: Custom Origin Endpoint (NEMOTRON_URL) ---
+  if (cfToken) {
+    const res = await tryCloudflareRest(cfToken, rawCfAccountId);
+    if (res) return res;
+  }
+
+  // --- Provider Candidate: Custom Origin Endpoint (NEMOTRON_URL) ---
   if (env?.NEMOTRON_URL) {
     try {
       const response = await fetch(`${env.NEMOTRON_URL}/v1/chat/completions`, {
@@ -339,8 +427,8 @@ export async function runNemotron(
             { role: 'system', content: systemPrompt },
             { role: 'user', content: promptText }
           ],
-          max_tokens: req.max_tokens || 1024,
-          temperature: req.temperature || 0.7
+          max_tokens: maxTokens,
+          temperature
         })
       });
 
@@ -364,7 +452,7 @@ export async function runNemotron(
     }
   }
 
-  // --- Provider 7: High-Fidelity Domain Response Generator (Zero-Key Fallback) ---
+  // --- Provider Candidate: High-Fidelity Domain Response Generator (Zero-Key Fallback) ---
   const pTokens = Math.ceil(promptText.length / 4);
   let resultText = '';
 
@@ -419,4 +507,5 @@ All x402 payment headers verified. Request completed successfully across edge is
     provider: 'embedded_llm'
   };
 }
+
 

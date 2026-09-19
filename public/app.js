@@ -191,10 +191,26 @@ export function App() {
   const [paymentTxHash, setPaymentTxHash] = useState('tx_0x9f8a32b7c61d...usdc_paid');
   const [customPrompt, setCustomPrompt] = useState(toolDetails['openspec.plan'].defaultPayload);
   
-  // Cloudflare Execution Options
-  const [cfToken, setCfToken] = useState('');
-  const [cfAccountId, setCfAccountId] = useState('');
-  const [showCfSettings, setShowCfSettings] = useState(false);
+  // Cloudflare & Upstream AI Execution Credentials (Persisted)
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('x402_api_key') || '');
+  const [cfToken, setCfToken] = useState(() => localStorage.getItem('x402_cf_token') || '');
+  const [cfAccountId, setCfAccountId] = useState(() => localStorage.getItem('x402_cf_account_id') || '');
+  const [showCfSettings, setShowCfSettings] = useState(() => Boolean(localStorage.getItem('x402_api_key') || localStorage.getItem('x402_cf_token')));
+
+  useEffect(() => {
+    if (apiKey) localStorage.setItem('x402_api_key', apiKey);
+    else localStorage.removeItem('x402_api_key');
+  }, [apiKey]);
+
+  useEffect(() => {
+    if (cfToken) localStorage.setItem('x402_cf_token', cfToken);
+    else localStorage.removeItem('x402_cf_token');
+  }, [cfToken]);
+
+  useEffect(() => {
+    if (cfAccountId) localStorage.setItem('x402_cf_account_id', cfAccountId);
+    else localStorage.removeItem('x402_cf_account_id');
+  }, [cfAccountId]);
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [execResult, setExecResult] = useState(null);
@@ -235,6 +251,10 @@ export function App() {
         headers['x-payment-amount'] = '0.05';
       }
 
+      if (apiKey.trim()) {
+        headers['x-api-key'] = apiKey.trim();
+        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+      }
       if (cfToken.trim()) {
         headers['x-cf-token'] = cfToken.trim();
       }
@@ -405,46 +425,56 @@ export function App() {
             ),
             h('button', {
               onClick: () => setShowCfSettings(!showCfSettings),
-              className: `px-3 py-2 rounded-xl text-xs font-mono flex items-center gap-1.5 border transition-all ${showCfSettings || cfToken ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50' : 'bg-slate-950 text-gray-400 border-slate-800 hover:text-white'}`
+              className: `px-3 py-2 rounded-xl text-xs font-mono flex items-center gap-1.5 border transition-all ${showCfSettings || apiKey || cfToken ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50' : 'bg-slate-950 text-gray-400 border-slate-800 hover:text-white'}`
             },
               h(Sliders, { className: 'w-3.5 h-3.5' }),
-              cfToken ? 'Cloudflare Token Set' : 'Cloudflare Token Options'
+              apiKey || cfToken ? 'AI API Key Set' : 'AI Credentials & Keys'
             )
           )
         ),
 
-        // Optional Cloudflare Live Credentials Configurator
+        // Optional Upstream AI & Cloudflare Credentials Configurator
         showCfSettings && h('div', { className: 'p-5 rounded-xl glass-panel border border-cyan-500/40 space-y-3 bg-slate-950' },
           h('div', { className: 'flex items-center justify-between' },
             h('h3', { className: 'text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2' },
               h(Key, { className: 'w-4 h-4 text-cyan-400' }),
-              'Optional Cloudflare Account Credentials'
+              'Upstream AI Provider Credentials & Keys'
             ),
-            h('span', { className: 'text-[11px] text-gray-400 font-mono' }, 'Optional: Pass CF_API_TOKEN to run against your Workers AI account directly')
+            h('span', { className: 'text-[11px] text-gray-400 font-mono' }, 'Supports OpenAI, DeepSeek, OpenRouter, and Cloudflare Workers AI Keys')
           ),
-          h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
             h('div', { className: 'space-y-1' },
-              h('label', { className: 'text-xs font-mono text-gray-400' }, 'CF_API_TOKEN (Optional)'),
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'API_KEY (OpenAI / DeepSeek / OpenRouter)'),
               h('input', {
                 type: 'password',
-                placeholder: 'Cloudflare Workers AI API Token...',
+                placeholder: 'sk-... or ds-... or sk-or-...',
+                value: apiKey,
+                onChange: (e) => setApiKey(e.target.value),
+                className: 'w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-cyan-300 focus:border-cyan-400 focus:outline-none'
+              })
+            ),
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'CF_API_TOKEN (Cloudflare Workers AI)'),
+              h('input', {
+                type: 'password',
+                placeholder: 'Cloudflare API Token...',
                 value: cfToken,
                 onChange: (e) => setCfToken(e.target.value),
                 className: 'w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-cyan-300 focus:border-cyan-400 focus:outline-none'
               })
             ),
             h('div', { className: 'space-y-1' },
-              h('label', { className: 'text-xs font-mono text-gray-400' }, 'CF_ACCOUNT_ID (Optional)'),
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'CF_ACCOUNT_ID (Cloudflare Account ID)'),
               h('input', {
                 type: 'text',
-                placeholder: 'Account ID (e.g. me)',
+                placeholder: 'Account ID (optional)',
                 value: cfAccountId,
                 onChange: (e) => setCfAccountId(e.target.value),
                 className: 'w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-cyan-300 focus:border-cyan-400 focus:outline-none'
               })
             ),
             h('div', { className: 'space-y-1' },
-              h('label', { className: 'text-xs font-mono text-gray-400' }, 'Target Settlement Network'),
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'Settlement Network'),
               h('select', {
                 value: selectedNetwork,
                 onChange: (e) => setSelectedNetwork(e.target.value),
