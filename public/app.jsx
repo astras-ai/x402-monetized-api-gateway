@@ -1062,58 +1062,23 @@ export function App() {
                     </div>
                   </div>
 
-                  {/* Master Passphrase Input */}
-                  <div className="p-4 rounded-2xl bg-cosmic-900/90 border border-indigo-500/20 space-y-2">
-                    <label className="text-xs font-bold text-cyan-300 font-mono flex items-center gap-2">
-                      <Key className="w-4 h-4 text-purple-400" />
-                      Master Passphrase for Secret Decryption & Re-Keying:
-                    </label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type={showPassphrase ? "text" : "password"}
-                          value={masterPassphrase}
-                          onChange={(e) => setMasterPassphrase(e.target.value)}
-                          placeholder="Enter Master Vault Passphrase..."
-                          className="w-full p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/40 text-xs font-mono text-white pr-10 focus:outline-none focus:border-cyan-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassphrase(!showPassphrase)}
-                          className="absolute right-3 top-2.5 text-gray-400 hover:text-white"
-                        >
-                          {showPassphrase ? <Eye className="w-4 h-4 text-cyan-400" /> : <Lock className="w-4 h-4 text-gray-400" />}
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => showToast('Master Passphrase updated for local session', 'info')}
-                        className="px-4 py-2.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-500 font-bold text-xs text-white transition-all font-mono"
-                      >
-                        Set Passphrase
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-gray-400 font-mono">
-                      * Values are stored at rest with <code className="text-emerald-400 font-bold">enc:v1:</code> IV salt prefix. Passing this passphrase unlocks Workers AI execution without storing unencrypted secrets on disk.
-                    </p>
-                  </div>
-
-                  {/* Add New Encrypted Secret Form */}
+                  {/* Add New Environment Variable */}
                   <div className="space-y-3 pt-2">
                     <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider font-mono flex items-center gap-1.5">
                       <Plus className="w-4 h-4 text-cyan-400" />
-                      Add / Encrypt New Environment Variable
+                      Add Environment Secret
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <input
                         type="text"
-                        placeholder="KEY_NAME (e.g. CF_API_TOKEN)"
+                        placeholder="KEY_NAME (e.g. CLOUDFLARE_API_KEY)"
                         value={newSecretKey}
                         onChange={(e) => setNewSecretKey(e.target.value.toUpperCase())}
                         className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
                       />
                       <input
-                        type="password"
-                        placeholder="Plaintext Secret Value"
+                        type="text"
+                        placeholder="Secret Value / Bearer Token"
                         value={newSecretValue}
                         onChange={(e) => setNewSecretValue(e.target.value)}
                         className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
@@ -1164,36 +1129,36 @@ export function App() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 font-mono text-[10px] font-bold">
-                             macOS KEYCHAIN READY
+                             macOS KEYCHAIN READY (`CLOUDFLARE_API_KEY`)
                           </div>
-                          <span className="text-xs font-bold text-white">Transient Zero-Storage Mode</span>
+                          <span className="text-xs font-bold text-white">Transient Direct Header Integration</span>
                         </div>
                       </div>
                       <p className="text-xs text-gray-300 leading-relaxed">
-                        If you are deleting secrets after testing because you prefer not to store secrets on Cloudflare Edge servers, you can pull tokens directly from your local <strong className="text-cyan-300">macOS Keychain</strong> on the fly! The gateway accepts transient request headers (<code className="text-amber-300">X-CF-Token</code>) per call, so <strong>zero secrets are saved on the edge</strong>.
+                        You have saved your key in macOS Keychain under <strong className="text-cyan-300">CLOUDFLARE_API_KEY</strong>. The x402 gateway reads transient request headers (<code className="text-amber-300">X-CF-Token</code>) dynamically per request without storing secrets on the edge server.
                       </p>
                       
                       <div className="space-y-2 font-mono text-[11px]">
                         <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300">
-                          <div className="text-cyan-400 font-bold mb-1">1. Save token in macOS Keychain (one time):</div>
+                          <div className="text-cyan-400 font-bold mb-1">1. Stored in macOS Keychain:</div>
                           <code className="text-emerald-300 select-all break-all">
-                            security add-generic-password -a "$USER" -s "cf-api-token" -w "your_secret_token_here"
+                            security add-generic-password -a "$USER" -s "CLOUDFLARE_API_KEY" -w "your_actual_key_here"
                           </code>
                         </div>
 
                         <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300">
-                          <div className="text-amber-400 font-bold mb-1">2. Run x402 Call pulling directly from macOS Keychain (Transient header):</div>
+                          <div className="text-amber-400 font-bold mb-1">2. Run x402 Call pulling dynamically from Keychain:</div>
                           <code className="text-emerald-300 select-all break-all">
                             curl -X POST "https://gateway.aifoundry.sh/v1/tools/review.kimi" \<br/>
-                            &nbsp;&nbsp;-H "X-CF-Token: $(security find-generic-password -w -s 'cf-api-token')" \<br/>
+                            &nbsp;&nbsp;-H "X-CF-Token: $(security find-generic-password -w -s 'CLOUDFLARE_API_KEY')" \<br/>
                             &nbsp;&nbsp;-H "Content-Type: application/json" -d '&#123;"code": "const x = 1;"&#125;'
                           </code>
                         </div>
 
                         <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300">
-                          <div className="text-purple-400 font-bold mb-1">3. Optional: Sync directly to Cloudflare Secrets via Wrangler CLI:</div>
+                          <div className="text-purple-400 font-bold mb-1">3. Or sync directly to Cloudflare Worker Secrets via Wrangler CLI:</div>
                           <code className="text-emerald-300 select-all break-all">
-                            security find-generic-password -w -s "cf-api-token" | npx wrangler secret put CF_API_TOKEN
+                            security find-generic-password -w -s "CLOUDFLARE_API_KEY" | npx wrangler secret put CLOUDFLARE_API_KEY
                           </code>
                         </div>
                       </div>
