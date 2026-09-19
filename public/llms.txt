@@ -116,12 +116,13 @@ Agents interact with the gateway using the **x402 Protocol Header (`X-402-Paymen
 ---
 
 ### Tool 6: Workers AI Edge Model Chat (`/v1/tools/nemotron.chat`)
-- **Provider:** Cloudflare Workers AI (Nemotron-3-8B / DeepSeek)
+- **Provider:** Cloudflare Workers AI (`@cf/openai/gpt-6-astra`, `@cf/deepseek/deepseek-v4-pro`, `@cf/meta/llama-3.1-8b-instruct-fast`, `@cf/nvidia/nemotron-3-120b-a12b`)
 - **Price:** $0.05 USDC
-- **Functionality:** Direct sub-20ms edge LLM proxy for autonomous AI agents requiring raw text completion or structured agent prompts.
+- **Functionality:** Direct sub-20ms edge LLM proxy for autonomous AI agents requiring raw text completion or structured agent prompts. Accepts any `@cf/...` Cloudflare Workers AI model identifier.
 - **Request Body JSON:**
   ```json
   {
+    "model": "@cf/openai/gpt-6-astra",
     "prompt": "Explain the x402 payment flow in 3 concise bullet points.",
     "max_tokens": 1024,
     "temperature": 0.3

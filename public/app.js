@@ -106,9 +106,10 @@ const toolDetails = {
   'nemotron.chat': {
     title: 'Workers AI Edge Model Chat',
     price: '$0.05 USDC',
-    desc: 'Direct sub-20ms edge LLM inference proxy for autonomous AI agents.',
-    provider: 'Cloudflare Workers AI (Nemotron/DeepSeek)',
+    desc: 'Direct sub-20ms edge LLM inference proxy for autonomous AI agents. Pass any Cloudflare Workers AI model identifier.',
+    provider: 'Cloudflare Workers AI (@cf/openai/gpt-6-astra, @cf/deepseek/deepseek-v4-pro, @cf/meta/llama-3.1-8b-instruct-fast)',
     defaultPayload: JSON.stringify({
+      model: '@cf/openai/gpt-6-astra',
       prompt: 'Compare unit economics of $0.05 USDC pay-per-call vs monthly SaaS subscription for AI developer APIs.'
     }, null, 2)
   }

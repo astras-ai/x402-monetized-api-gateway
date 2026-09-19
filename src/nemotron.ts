@@ -142,6 +142,8 @@ export async function runNemotron(
     const gatewayId = req.cf_gateway_id || env?.CF_GATEWAY_ID || 'default';
     const candidateModels = [
       req.model,
+      '@cf/openai/gpt-6-astra',
+      '@cf/deepseek/deepseek-v4-pro',
       '@cf/meta/llama-3.1-8b-instruct-fast',
       '@cf/meta/llama-3.1-8b-instruct',
       '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
@@ -344,6 +346,8 @@ export async function runNemotron(
 
     const models = [
       chosenModel,
+      '@cf/openai/gpt-6-astra',
+      '@cf/deepseek/deepseek-v4-pro',
       '@cf/meta/llama-3.1-8b-instruct-fast',
       '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
       '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
