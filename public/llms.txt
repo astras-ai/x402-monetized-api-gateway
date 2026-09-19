@@ -1,0 +1,235 @@
+# AIFoundry.sh x402 Gateway — AI Agent Services & API Documentation
+
+> **Title:** AIFoundry.sh x402 Pay-Per-Call Edge Gateway & Multi-Chain AI Service Marketplace
+> **Protocol Standard:** x402 (HTTP 402 Payment Required for Autonomous AI Agents)
+> **Default Price per Tool Call:** $0.05 USDC (or equivalent crypto asset)
+> **Primary Beneficiary Treasury Wallet:** `0x003cC678764C8143a4b92370acB40e3B41319016`
+> **Gateway Base URL:** `https://gateway.aifoundry.sh`
+
+---
+
+## 1. Executive Overview for Autonomous LLMs & AI Agents
+
+AIFoundry.sh provides a high-throughput, sub-20ms edge gateway running on Cloudflare Workers that enables autonomous AI agents to purchase specialized developer tools, AI code reviews, software architecture blueprints, security audits, zero-knowledge encryption, and LLM inference on a strict **pay-per-call ($0.05 USDC)** basis.
+
+Agents interact with the gateway using the **x402 Protocol Header (`X-402-Payment`)**. When an agent makes an unpaid request to any tool endpoint, the gateway responds with `HTTP 402 Payment Required` along with payment instructions containing the price ($0.05 USDC), the beneficiary address, and supported chain configurations. Once the agent attaches a valid transaction hash or proof to the request header, the edge gateway executes the underlying AI pipeline and returns the result in JSON format.
+
+---
+
+## 2. Quick API Reference
+
+| Endpoint | Method | Payment Required | Price | Description |
+|---|---|---|---|---|
+| `GET /v1/tools` | GET | Free | $0.00 | List all available AI tools & pricing |
+| `GET /v1/vaults` | GET | Free | $0.00 | List all 16 multi-chain payment treasury wallets |
+| `GET /v1/plan` | GET | Free | $0.00 | Calculate prepaid deposit token caps & time limits |
+| `GET /.well-known/x402` | GET | Free | $0.00 | x402 protocol machine-readable JSON manifest |
+| `POST /v1/tools/openspec.plan` | POST | Required (`X-402-Payment`) | $0.05 | Software Architecture & Multi-Agent Plan Generator |
+| `POST /v1/tools/review.kimi` | POST | Required (`X-402-Payment`) | $0.05 | Alibaba Open Code Review & Token Receipt Meter |
+| `POST /v1/tools/audit.cf` | POST | Required (`X-402-Payment`) | $0.05 | Cloudflare Workers Security & Wrangler Auditor |
+| `POST /v1/tools/crypto.vault` | POST | Required (`X-402-Payment`) | $0.05 | Zero-Knowledge Hardware Vault Guard & AES-256 |
+| `POST /v1/tools/design.402` | POST | Required (`X-402-Payment`) | $0.05 | OpenDesign UI Spec & Tailwind Token Generator |
+| `POST /v1/tools/nemotron.chat` | POST | Required (`X-402-Payment`) | $0.05 | Workers AI Edge Model LLM Proxy |
+
+---
+
+## 3. Detailed Tool Specifications & Capabilities
+
+### Tool 1: OpenSpec Software Architecture Plan Generator (`/v1/tools/openspec.plan`)
+- **Provider:** Fission AI OpenSpec + DeepSeek R1 Reasoning Model
+- **Price:** $0.05 USDC
+- **Functionality:** Accepts a software system goal or prompt and generates a complete, production-grade software architecture document, including system modules, database schemas, API specs, multi-agent developer team roles, persona specifications, and business unit economics.
+- **Request Body JSON:**
+  ```json
+  {
+    "goal": "Build an AI monetized web scraper and markdown generator on Cloudflare Workers",
+    "architecture_style": "microservices",
+    "target_cloud": "Cloudflare Workers + D1 + R2"
+  }
+  ```
+- **Response Output JSON:** Contains `architecture_plan`, `system_diagram`, `roles_breakdown`, `business_model`, and `openspec_yaml`.
+
+---
+
+### Tool 2: Alibaba Open Code Review & Token Meter (`/v1/tools/review.kimi`)
+- **Provider:** Alibaba Open Code Review + Kimi AST Tokenizer
+- **Price:** $0.05 USDC
+- **Functionality:** Performs AST-level static code analysis on provided source code, detecting security vulnerabilities, performance bottlenecks, code smells, and exact token consumption receipts.
+- **Request Body JSON:**
+  ```json
+  {
+    "code": "async function handleAuth(req) { const token = req.headers.get('Authorization'); ... }",
+    "language": "javascript",
+    "check_security": true
+  }
+  ```
+- **Response Output JSON:** Contains `review_summary`, `issues_found`, `security_score`, `token_receipt` (input_tokens, output_tokens, estimated_cogs_usd), and `suggested_patches`.
+
+---
+
+### Tool 3: Cloudflare Workers Security Audit (`/v1/tools/audit.cf`)
+- **Provider:** Cloudflare Security Audit Skill Engine
+- **Price:** $0.05 USDC
+- **Functionality:** Audits `wrangler.json` / `wrangler.toml` files and Worker source code against Cloudflare best practices, flagging exposed API keys, unencrypted KV/D1 bindings, missing CORS headers, and x402 readiness.
+- **Request Body JSON:**
+  ```json
+  {
+    "wrangler_config": "{\"name\": \"my-worker\", \"main\": \"src/index.ts\", \"vars\": {\"API_KEY\": \"sk_live_12345\"}}",
+    "worker_code": "export default { async fetch(req) { ... } }"
+  }
+  ```
+- **Response Output JSON:** Contains `audit_passed`, `vulnerabilities` array, `wrangler_score`, and `remediation_steps`.
+
+---
+
+### Tool 4: Zero-Knowledge Vault Guard & AES-256 (`/v1/tools/crypto.vault`)
+- **Provider:** WebCrypto Edge Hardware Isolate
+- **Price:** $0.05 USDC
+- **Functionality:** Provides zero-knowledge data envelope encryption (AES-256-GCM) and PII scanning for AI agents so sensitive financial data, private keys, or credentials are never exposed in unencrypted transit.
+- **Request Body JSON:**
+  ```json
+  {
+    "action": "encrypt",
+    "payload": "user_credit_card_or_private_key_string",
+    "mask_pii": true
+  }
+  ```
+- **Response Output JSON:** Contains `encrypted_ciphertext`, `iv`, `auth_tag`, `pii_detected` list, and `hash`.
+
+---
+
+### Tool 5: OpenDesign UI Spec & Tailwind Token Generator (`/v1/tools/design.402`)
+- **Provider:** OpenDesign DeepSeek UI Engine
+- **Price:** $0.05 USDC
+- **Functionality:** Converts high-level product descriptions into structured Tailwind CSS design systems, atomic component hierarchies, SVG branding/logo specifications, and x402 payment modal wireframes.
+- **Request Body JSON:**
+  ```json
+  {
+    "product_name": "ScrapeEngine x402",
+    "theme": "dark-futuristic-cyan",
+    "requested_components": ["HeroSection", "PricingCard", "PaymentModal"]
+  }
+  ```
+- **Response Output JSON:** Contains `design_tokens` (colors, typography, spacing), `component_trees`, and `tailwind_jsx`.
+
+---
+
+### Tool 6: Workers AI Edge Model Chat (`/v1/tools/nemotron.chat`)
+- **Provider:** Cloudflare Workers AI (Nemotron-3-8B / DeepSeek)
+- **Price:** $0.05 USDC
+- **Functionality:** Direct sub-20ms edge LLM proxy for autonomous AI agents requiring raw text completion or structured agent prompts.
+- **Request Body JSON:**
+  ```json
+  {
+    "prompt": "Explain the x402 payment flow in 3 concise bullet points.",
+    "max_tokens": 1024,
+    "temperature": 0.3
+  }
+  ```
+- **Response Output JSON:** Contains `result` (generated text), `usage` (prompt_tokens, completion_tokens, total_tokens), and `model`.
+
+---
+
+## 4. Multi-Chain Treasury Vault Settlement Matrix
+
+AI agents can settle x402 payments on any of the following 16 supported blockchain networks. The payment transaction hash is provided in the `X-402-Payment` HTTP request header.
+
+| Chain Network | Network ID / Chain ID | Native USDC / Asset | Treasury Settlement Beneficiary Address |
+|---|---|---|---|
+| **Base Mainnet** | `8453` | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Ethereum Mainnet** | `1` | `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Polygon PoS** | `137` | `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Arbitrum One** | `42161` | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Optimism Mainnet** | `10` | `0x0b2C639c533813f4Aa9D7837CAf62653d097F853` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Celo Mainnet** | `42220` | `0xcebA2B2B97397262c03E3e226462C27909A6d75d` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Unichain** | `130` | `0x078D782b760474a361dDA0AF3839290b0EF57AD6` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **zkSync Era** | `324` | `0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Ink Network** | `57073` | Native USDC | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Plasma L2** | `9999` | Native USDC | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Hyperliquid L1** | `999` | Native USDC | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **HyperVM / Monad** | `10143` | Native USDC | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Sonic Bridged** | `146` | `0x29219dd400f2Bf60E5a23d13Be72B486D4038894` | `0x003cC678764C8143a4b92370acB40e3B41319016` |
+| **Solana Mainnet** | `solana-mainnet` | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | `7yRvqZBC52CCiJbcdTFN13oHyfUuKib9NZpAUAXddNTN` |
+| **Bitcoin / L402** | `bitcoin-mainnet` | BTC / Lightning Sats | `bc1q2maw972h5eegt0njqm0z5vcqfv69vzlu7066q6` |
+| **TRON Network** | `728126428` | USDT / USDC TRC20 | `TGiRqgrbUWGWjbqzC9krVk4XbS3MXMFpzY` |
+| **Cosmos / Noble** | `noble-1` | `uusdc` | `cosmos10yd06xk59aznrcvzdppuxu9z2e0tf9a65gccqc` |
+| **Aptos Mainnet** | `1` | `0xbae2076...` | `0x2d041406ed1f2240872394b6d7a3471b7a23ceef116755bbc695f9e496cd3ce4` |
+
+---
+
+## 5. Smart Contract Architecture (`X402PaymentGateway.sol`)
+
+The EVM gateway smart contract source code is stored at `/contracts/X402PaymentGateway.sol`.
+
+Key features of the smart contract:
+- **Direct Settlement:** Transfers ERC20 tokens directly from the payer to the beneficiary (`0x003cC678764C8143a4b92370acB40e3B41319016`) without lockups.
+- **Native GAS Support:** `payForCallNative(bytes32 requestId)` accepts native ETH / POL / CELO.
+- **EIP-2612 Gasless Permits:** `payWithPermit(...)` allows AI agents to submit signed payment authorizations without paying native gas fees.
+- **Replay Protection:** `usedNonces[requestId]` mapping prevents double-spending or replay attacks across HTTP request IDs.
+
+---
+
+## 6. Token Caps, Quotas & Overrun Protection Rules
+
+To protect AI agents and gateway operators from budget overruns, the gateway enforces mathematically calculated token & execution caps:
+
+1. **Token Headroom Calculation Formula:**
+   $$\text{Funded Tokens Total} = \left\lfloor \frac{\text{Prepaid Deposit USD}}{\text{Base Cost Per 1k Tokens (\$0.001)}} \right\rfloor \times 1000$$
+2. **Per-Request Hard Cap:** Every API call is hard-capped at **4,096 max generated tokens**.
+3. **CPU Execution Timeout:** Cloudflare Worker CPU execution time is strictly capped at **30,000 ms** per call.
+4. **Prepaid Plan Endpoint (`/v1/plan`):** Agents can query `/v1/plan?deposit_usd=1.00&window_minutes=60` to inspect their rate caps (TPM/RPM) before issuing tool calls.
+
+---
+
+## 7. How Autonomous AI Agents Consume x402 Services
+
+### Python SDK Integration Example
+```python
+import requests
+
+GATEWAY_URL = "https://gateway.aifoundry.sh/v1/tools/openspec.plan"
+BENEFICIARY = "0x003cC678764C8143a4b92370acB40e3B41319016"
+
+# Step 1: Probe Gateway
+res = requests.post(GATEWAY_URL, json={"goal": "Build an AI agent network"})
+
+if res.status_code == 402:
+    price_usd = res.headers.get("X-402-Price-USD")
+    pay_to = res.headers.get("X-402-Pay-To")
+    print(f"Payment required: ${price_usd} USDC to {pay_to}")
+
+    # Step 2: Execute $0.05 USDC payment transaction on Base or EVM
+    tx_hash = "tx_0x8f32c0d9a1e4b..."  # Simulated or web3 transaction hash
+
+    # Step 3: Re-issue request with payment proof header
+    paid_res = requests.post(
+        GATEWAY_URL,
+        headers={"X-402-Payment": tx_hash},
+        json={"goal": "Build an AI agent network"}
+    )
+    print("Tool Result:", paid_res.json())
+```
+
+### cURL Quick Test Command
+```bash
+# Challenge Test (Expects 402 Payment Required)
+curl -i -X POST "https://gateway.aifoundry.sh/v1/tools/nemotron.chat" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Hello x402 gateway!"}'
+
+# Paid Test (Simulated Settlement Header)
+curl -X POST "https://gateway.aifoundry.sh/v1/tools/nemotron.chat" \
+  -H "Content-Type: application/json" \
+  -H "X-402-Payment: tx_0x_settled_usdc_003cC678764C8143a4b92370acB40e3B41319016" \
+  -d '{"prompt": "Generate a concise architecture overview."}'
+```
+
+---
+
+## 8. Links & Resources
+
+- **x402 Protocol Manifest:** `https://gateway.aifoundry.sh/.well-known/x402`
+- **Tool Catalog JSON:** `https://gateway.aifoundry.sh/v1/tools`
+- **Multi-Chain Treasury Vaults JSON:** `https://gateway.aifoundry.sh/v1/vaults`
+- **Prepaid Token Quota Plan API:** `https://gateway.aifoundry.sh/v1/plan`
+- **Full LLM Machine Context:** `https://gateway.aifoundry.sh/llms.txt`

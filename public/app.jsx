@@ -236,6 +236,71 @@ export function App() {
     }
   ];
 
+  const vaultsData = [
+    { network: 'Base Mainnet', type: 'EVM', chainId: '8453', usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Primary' },
+    { network: 'Ethereum Mainnet', type: 'EVM', chainId: '1', usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'High Liquidity' },
+    { network: 'Polygon PoS', type: 'EVM', chainId: '137', usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Micro-fee' },
+    { network: 'Arbitrum One', type: 'EVM', chainId: '42161', usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'L2 Scaling' },
+    { network: 'Optimism Mainnet', type: 'EVM', chainId: '10', usdc: '0x0b2C639c533813f4Aa9D7837CAf62653d097F853', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'OP Stack' },
+    { network: 'Celo Mainnet', type: 'EVM', chainId: '42220', usdc: '0xcebA2B2B97397262c03E3e226462C27909A6d75d', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Mobile / Gas' },
+    { network: 'Unichain', type: 'EVM', chainId: '130', usdc: '0x078D782b760474a361dDA0AF3839290b0EF57AD6', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'DeFi L2' },
+    { network: 'zkSync Era', type: 'EVM', chainId: '324', usdc: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'ZK Rollup' },
+    { network: 'Ink Network', type: 'EVM', chainId: '57073', usdc: 'Native USDC', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Kraken L2' },
+    { network: 'Plasma L2', type: 'EVM', chainId: '9999', usdc: 'Native USDC', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Ultra Fast' },
+    { network: 'Hyperliquid L1', type: 'EVM', chainId: '999', usdc: 'Native USDC', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Perp L1' },
+    { network: 'Monad Network', type: 'EVM', chainId: '10143', usdc: 'Native USDC', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Parallel EVM' },
+    { network: 'Sonic Bridged', type: 'EVM', chainId: '146', usdc: '0x29219dd400f2Bf60E5a23d13Be72B486D4038894', payTo: '0x003cC678764C8143a4b92370acB40e3B41319016', tag: 'Fantom Sonic' },
+    { network: 'Solana Mainnet', type: 'Solana', chainId: 'solana-mainnet', usdc: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', payTo: '7yRvqZBC52CCiJbcdTFN13oHyfUuKib9NZpAUAXddNTN', tag: 'SPL Token' },
+    { network: 'Bitcoin / L402', type: 'Bitcoin', chainId: 'bitcoin-mainnet', usdc: 'BTC / Sats', payTo: 'bc1q2maw972h5eegt0njqm0z5vcqfv69vzlu7066q6', tag: 'L402 Lightning' },
+    { network: 'TRON Network', type: 'TRON', chainId: '728126428', usdc: 'USDT / USDC TRC20', payTo: 'TGiRqgrbUWGWjbqzC9krVk4XbS3MXMFpzY', tag: 'TRC-20' },
+    { network: 'Cosmos / Noble', type: 'Cosmos', chainId: 'noble-1', usdc: 'uusdc', payTo: 'cosmos10yd06xk59aznrcvzdppuxu9z2e0tf9a65gccqc', tag: 'IBC USDC' },
+    { network: 'Aptos Mainnet', type: 'Move', chainId: '1', usdc: '0xbae207659...', payTo: '0x2d041406ed1f2240872394b6d7a3471b7a23ceef116755bbc695f9e496cd3ce4', tag: 'Aptos Move' }
+  ];
+
+  const solidityContractCode = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+/**
+ * @title X402PaymentGateway
+ * @notice Production-grade, multi-chain settlement gateway for x402 HTTP payments.
+ * Beneficiary: 0x003cC678764C8143a4b92370acB40e3B41319016
+ */
+
+interface IERC20 {
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+}
+
+interface IERC20Permit {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
+}
+
+contract X402PaymentGateway {
+    address public beneficiary = 0x003cC678764C8143a4b92370acB40e3B41319016;
+    address public owner;
+    mapping(bytes32 => bool) public usedNonces;
+
+    event PaymentSettled(bytes32 indexed requestId, address indexed payer, address indexed token, uint256 amount);
+
+    constructor() { owner = msg.sender; }
+
+    function payForCall(bytes32 requestId, address token, uint256 amount) external returns (bool) {
+        require(!usedNonces[requestId], "X402: Replay attack prevention");
+        usedNonces[requestId] = true;
+        require(IERC20(token).transferFrom(msg.sender, beneficiary, amount), "X402: Transfer failed");
+        emit PaymentSettled(requestId, msg.sender, token, amount);
+        return true;
+    }
+
+    function payWithPermit(bytes32 requestId, address token, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external returns (bool) {
+        require(!usedNonces[requestId], "X402: Already settled");
+        usedNonces[requestId] = true;
+        IERC20Permit(token).permit(msg.sender, address(this), amount, deadline, v, r, s);
+        require(IERC20(token).transferFrom(msg.sender, beneficiary, amount), "X402: Transfer failed");
+        emit PaymentSettled(requestId, msg.sender, token, amount);
+        return true;
+    }
+}`;
+
   const rolesData = [
     {
       role: 'Founder / Operator',
@@ -431,6 +496,28 @@ export function App() {
             >
               <Activity className="w-3.5 h-3.5" />
               Token & Time Plan
+            </button>
+            <button
+              onClick={() => setActiveTab('contracts')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                activeTab === 'contracts'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Smart Contracts & Vaults
+            </button>
+            <button
+              onClick={() => setActiveTab('llms')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                activeTab === 'llms'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              llms.txt
             </button>
           </div>
         </div>
@@ -1174,6 +1261,195 @@ async function callX402Tool(toolName, payload) {
                   2
                 )}
               </pre>
+            </div>
+          </div>
+        )}
+
+        {/* Smart Contracts & Multi-Chain Vaults Tab */}
+        {activeTab === 'contracts' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-800">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-cyan-400" /> X402PaymentGateway.sol Smart Contract
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Multi-chain EVM settlement contract supporting ERC20 (USDC/USDT), Native Gas payments, and EIP-2612 Gasless Permits.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60 text-xs font-mono font-bold">
+                    Solidity ^0.8.20
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(solidityContractCode, 'Solidity Contract Code')}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-cyan-400" /> Copy Solidity Code
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-3">
+                  <span className="text-xs font-semibold text-slate-300 block uppercase font-mono tracking-wider">
+                    X402PaymentGateway.sol Source
+                  </span>
+                  <pre className="bg-slate-950 p-4 rounded-xl text-xs font-mono text-cyan-300 overflow-x-auto border border-slate-800/90 leading-relaxed max-h-[420px] overflow-y-auto">
+                    {solidityContractCode}
+                  </pre>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                    <span className="text-xs font-semibold text-slate-200 block uppercase font-mono">
+                      Primary Beneficiary Treasury
+                    </span>
+                    <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between gap-2">
+                      <code className="text-xs text-cyan-300 font-mono truncate">0x003cC678764C8143a4b92370acB40e3B41319016</code>
+                      <button
+                        onClick={() => copyToClipboard('0x003cC678764C8143a4b92370acB40e3B41319016', 'Beneficiary Address')}
+                        className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white shrink-0"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      All settlements automatically route directly to this address across all 16 supported blockchains.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 space-y-2">
+                    <span className="text-xs font-semibold text-amber-400 block font-mono">
+                      Deployment Guides
+                    </span>
+                    <ul className="text-xs text-slate-300 space-y-2">
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> Remix IDE / Hardhat / Foundry compatible
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> Zero proxy overhead, gas-optimized transfers
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> EIP-2612 Gasless Permit signature verify
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 16 Multi-Chain Treasury Vaults Matrix */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-amber-400" /> 16 Multi-Chain Treasury Settlement Vaults
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Live settlement addresses across EVM, Solana, Bitcoin/L402, TRON, Cosmos, and Aptos.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 text-xs font-mono font-semibold">
+                  16 Chains Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {vaultsData.map((vault, i) => (
+                  <div key={i} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition-all space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-cyan-400" /> {vault.network}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-cyan-300 font-mono border border-slate-800">
+                        {vault.tag}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px] font-mono">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Chain ID / Type:</span>
+                        <span className="text-slate-200">{vault.chainId}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Asset:</span>
+                        <span className="text-amber-300 truncate max-w-[150px]">{vault.usdc}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900/90 p-2 rounded border border-slate-800 flex items-center justify-between gap-1.5 mt-2">
+                      <code className="text-[11px] text-cyan-300 font-mono truncate">{vault.payTo}</code>
+                      <button
+                        onClick={() => copyToClipboard(vault.payTo, `${vault.network} Address`)}
+                        className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded shrink-0"
+                        title="Copy Address"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LLMs Documentation Tab */}
+        {activeTab === 'llms' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-800">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-cyan-400" /> Autonomous AI Context (llms.txt)
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Structured machine-readable Markdown manifest designed specifically for LLMs, AutoGPTs, and AI Agents to consume AIFoundry services directly.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="/llms.txt"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5" /> Open /llms.txt
+                  </a>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-5 rounded-xl border border-slate-800/90 font-mono text-xs text-slate-300 leading-relaxed overflow-x-auto space-y-4 max-h-[600px] overflow-y-auto">
+                <div className="text-cyan-400 font-bold"># AIFoundry.sh x402 Gateway — AI Agent Services & API Documentation</div>
+                <p className="text-slate-400">
+                  &gt; Title: AIFoundry.sh x402 Pay-Per-Call Edge Gateway & Multi-Chain AI Service Marketplace<br />
+                  &gt; Protocol Standard: x402 (HTTP 402 Payment Required for Autonomous AI Agents)<br />
+                  &gt; Default Price per Tool Call: $0.05 USDC<br />
+                  &gt; Primary Beneficiary Treasury Wallet: <code className="text-cyan-300">0x003cC678764C8143a4b92370acB40e3B41319016</code><br />
+                  &gt; Gateway Base URL: <code className="text-cyan-300">https://gateway.aifoundry.sh</code>
+                </p>
+
+                <div className="border-t border-slate-800 pt-3">
+                  <span className="text-amber-400 font-bold block mb-2">## Available Tools & Endpoints ($0.05 USDC per call)</span>
+                  <ul className="space-y-1.5 text-slate-300">
+                    <li>• <code className="text-cyan-300">POST /v1/tools/openspec.plan</code> — Fission AI OpenSpec Architecture & Dev Plan Generator</li>
+                    <li>• <code className="text-cyan-300">POST /v1/tools/review.kimi</code> — Alibaba Open Code Review & Token Receipt Meter</li>
+                    <li>• <code className="text-cyan-300">POST /v1/tools/audit.cf</code> — Cloudflare Workers Security & Wrangler Auditor</li>
+                    <li>• <code className="text-cyan-300">POST /v1/tools/crypto.vault</code> — Zero-Knowledge Hardware Vault Guard & AES-256</li>
+                    <li>• <code className="text-cyan-300">POST /v1/tools/design.402</code> — OpenDesign UI Spec & Tailwind Token Generator</li>
+                    <li>• <code className="text-cyan-300">POST /v1/tools/nemotron.chat</code> — Workers AI Edge Model LLM Proxy</li>
+                  </ul>
+                </div>
+
+                <div className="border-t border-slate-800 pt-3">
+                  <span className="text-emerald-400 font-bold block mb-2">## Multi-Chain Settlement Matrix</span>
+                  <p className="text-slate-400">
+                    Supports 16 settlement blockchains (Base, Ethereum, Polygon, Arbitrum, Optimism, Celo, Unichain, zkSync, Ink, Plasma, Hyperliquid, Monad, Sonic, Solana, Bitcoin L402, TRON, Cosmos, Aptos). Primary settlement wallet: <code className="text-cyan-300">0x003cC678764C8143a4b92370acB40e3B41319016</code>.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

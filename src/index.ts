@@ -17,42 +17,139 @@ type Bindings = {
   ASSETS?: any;
 };
 
-// Supported Settlement Networks for x402
-const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: string; isTestnet: boolean }> = {
-  'base-sepolia': {
-    name: 'Base Sepolia Testnet',
-    chainId: 84532,
-    usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-    isTestnet: true
-  },
+// Supported Settlement Networks for x402 Gateway (16 Multi-Chain Treasury Vaults)
+const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: string; payTo: string; isTestnet: boolean }> = {
   'base': {
     name: 'Base Mainnet',
     chainId: 8453,
     usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
     isTestnet: false
   },
-  'solana-devnet': {
-    name: 'Solana Devnet',
-    chainId: 'solana-devnet',
-    usdc: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
-    isTestnet: true
+  'ethereum': {
+    name: 'Ethereum Mainnet',
+    chainId: 1,
+    usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
   },
   'solana': {
     name: 'Solana Mainnet',
     chainId: 'solana-mainnet',
     usdc: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    payTo: '7yRvqZBC52CCiJbcdTFN13oHyfUuKib9NZpAUAXddNTN',
     isTestnet: false
   },
-  'polygon-amoy': {
-    name: 'Polygon Amoy Testnet',
-    chainId: 80002,
-    usdc: '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582',
-    isTestnet: true
+  'bitcoin': {
+    name: 'Bitcoin Mainnet & L402',
+    chainId: 'bitcoin-mainnet',
+    usdc: 'N/A (BTC / L402 Sats)',
+    payTo: 'bc1q2maw972h5eegt0njqm0z5vcqfv69vzlu7066q6',
+    isTestnet: false
   },
-  'arbitrum-sepolia': {
-    name: 'Arbitrum Sepolia Testnet',
-    chainId: 421614,
-    usdc: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+  'polygon': {
+    name: 'Polygon PoS',
+    chainId: 137,
+    usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'arbitrum': {
+    name: 'Arbitrum One',
+    chainId: 42161,
+    usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'optimism': {
+    name: 'Optimism Mainnet',
+    chainId: 10,
+    usdc: '0x0b2C639c533813f4Aa9D7837CAf62653d097F853',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'tron': {
+    name: 'TRON Network',
+    chainId: 728126428,
+    usdc: 'TEkxiTehnPSmSe2XMPrMKqM8ppXu5P47d5',
+    payTo: 'TGiRqgrbUWGWjbqzC9krVk4XbS3MXMFpzY',
+    isTestnet: false
+  },
+  'hyperliquid': {
+    name: 'Hyperliquid L1',
+    chainId: 999,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'monad': {
+    name: 'Monad Network',
+    chainId: 10143,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'sonic': {
+    name: 'Sonic Bridged',
+    chainId: 146,
+    usdc: '0x29219dd400f2Bf60E5a23d13Be72B486D4038894',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'celo': {
+    name: 'Celo Mainnet',
+    chainId: 42220,
+    usdc: '0xcebA2B2B97397262c03E3e226462C27909A6d75d',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'unichain': {
+    name: 'Unichain Mainnet',
+    chainId: 130,
+    usdc: '0x078D782b760474a361dDA0AF3839290b0EF57AD6',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'zksync': {
+    name: 'zkSync Era',
+    chainId: 324,
+    usdc: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'ink': {
+    name: 'Ink Network',
+    chainId: 57073,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'plasma': {
+    name: 'Plasma L2',
+    chainId: 9999,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'cosmos': {
+    name: 'Cosmos / Noble',
+    chainId: 'noble-1',
+    usdc: 'uusdc',
+    payTo: 'cosmos10yd06xk59aznrcvzdppuxu9z2e0tf9a65gccqc',
+    isTestnet: false
+  },
+  'aptos': {
+    name: 'Aptos Mainnet',
+    chainId: 1,
+    usdc: '0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b',
+    payTo: '0x2d041406ed1f2240872394b6d7a3471b7a23ceef116755bbc695f9e496cd3ce4',
+    isTestnet: false
+  },
+  'base-sepolia': {
+    name: 'Base Sepolia Testnet',
+    chainId: 84532,
+    usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
     isTestnet: true
   }
 };
@@ -137,16 +234,50 @@ app.get('/health', (c) => {
   return c.json({
     status: 'ok',
     gateway: 'AIFoundry.sh x402 Gateway',
-    network: c.env.NETWORK || 'base-sepolia',
-    pay_to: c.env.PAY_TO || '0x71C74B532b2C34a5d89f816d8F349582f3402B89',
+    network: c.env.NETWORK || 'base',
+    pay_to: c.env.PAY_TO || '0x003cC678764C8143a4b92370acB40e3B41319016',
     timestamp: new Date().toISOString()
   });
 });
 
 // Machine-Readable x402 Protocol Manifest for AI Agents
+app.get('/llms.txt', async (c) => {
+  if (c.env.ASSETS) {
+    try {
+      const res = await c.env.ASSETS.fetch(c.req.raw);
+      if (res.status === 200) return res;
+    } catch (e) {}
+  }
+  return c.text(`# AIFoundry.sh x402 Gateway — AI Agent Services & API Documentation
+Title: AIFoundry.sh x402 Pay-Per-Call Edge Gateway & Multi-Chain AI Service Marketplace
+Protocol Standard: x402 (HTTP 402 Payment Required)
+Default Price: $0.05 USDC
+Primary Beneficiary: 0x003cC678764C8143a4b92370acB40e3B41319016
+Gateway URL: https://gateway.aifoundry.sh
+
+Tools Available:
+1. /v1/tools/openspec.plan ($0.05 USDC) - Architecture & Dev Plan Generator
+2. /v1/tools/review.kimi ($0.05 USDC) - Alibaba Open Code Review & Token Receipt Meter
+3. /v1/tools/audit.cf ($0.05 USDC) - Cloudflare Workers Security & Wrangler Audit
+4. /v1/tools/crypto.vault ($0.05 USDC) - Zero-Knowledge Hardware Vault Guard
+5. /v1/tools/design.402 ($0.05 USDC) - OpenDesign UI Spec & Tailwind Tokens
+6. /v1/tools/nemotron.chat ($0.05 USDC) - Workers AI Edge LLM Chat
+
+Multi-Chain Treasury Vaults:
+- EVM (Base, Ethereum, Polygon, Arbitrum, Optimism, Celo, Unichain, zkSync, Ink, Plasma, Hyperliquid, Monad, Sonic): 0x003cC678764C8143a4b92370acB40e3B41319016
+- Solana: 7yRvqZBC52CCiJbcdTFN13oHyfUuKib9NZpAUAXddNTN
+- Bitcoin / L402: bc1q2maw972h5eegt0njqm0z5vcqfv69vzlu7066q6
+- TRON (USDT): TGiRqgrbUWGWjbqzC9krVk4XbS3MXMFpzY
+- Cosmos Noble: cosmos10yd06xk59aznrcvzdppuxu9z2e0tf9a65gccqc
+- Aptos: 0x2d041406ed1f2240872394b6d7a3471b7a23ceef116755bbc695f9e496cd3ce4
+`, 200, { 'Content-Type': 'text/plain; charset=utf-8' });
+});
+
+app.get('/llms-full.txt', (c) => c.redirect('/llms.txt'));
+
 app.get('/.well-known/x402', (c) => {
-  const payTo = c.env.PAY_TO || '0x71C74B532b2C34a5d89f816d8F349582f3402B89';
-  const network = c.env.NETWORK || 'base-sepolia';
+  const payTo = c.env.PAY_TO || '0x003cC678764C8143a4b92370acB40e3B41319016';
+  const network = c.env.NETWORK || 'base';
 
   return c.json({
     x402_version: 1,
@@ -168,8 +299,17 @@ app.get('/v1/tools', (c) => {
     gateway: 'AIFoundry.sh x402 AI Gateway',
     price_per_call_usd: 0.05,
     accepted_asset: 'USDC',
-    pay_to: c.env.PAY_TO || '0x71C74B532b2C34a5d89f816d8F349582f3402B89',
+    pay_to: c.env.PAY_TO || '0x003cC678764C8143a4b92370acB40e3B41319016',
     tools: TOOL_CATALOG
+  });
+});
+
+// Multi-Chain Treasury Vaults Endpoint
+app.get('/v1/vaults', (c) => {
+  return c.json({
+    status: 'ok',
+    primary_beneficiary: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    vaults: NETWORK_REGISTRY
   });
 });
 
@@ -216,8 +356,9 @@ app.get('/api/networks', (c) => c.json(NETWORK_REGISTRY));
 // Direct x402 Tool Execution
 app.post('/v1/tools/:toolName', async (c) => {
   const toolName = c.req.param('toolName');
-  const network = c.env.NETWORK || 'base-sepolia';
-  const payTo = c.env.PAY_TO || '0x71C74B532b2C34a5d89f816d8F349582f3402B89';
+  const network = c.req.query('network') || c.env.NETWORK || 'base';
+  const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
+  const payTo = c.env.PAY_TO || networkConfig.payTo || '0x003cC678764C8143a4b92370acB40e3B41319016';
 
   let body: any = {};
   try {
