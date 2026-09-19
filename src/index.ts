@@ -387,66 +387,24 @@ app.get('/health', (c) => {
 // GET / — Catalog of Tools and SKUs (or HTML UI if browser)
 app.get('/', async (c) => {
   const accept = c.req.header('accept') || '';
-  if ((accept.includes('text/html') || accept.includes('*/*') || !accept) && c.env.ASSETS) {
-    return c.env.ASSETS.fetch(c.req.raw);
+  if (accept.includes('application/json')) {
+    const host = c.req.header('host') || 'api.aifoundry.sh';
+    return c.json({
+      name: 'AIFoundry.sh x402 Monetized Edge Gateway',
+      brand: 'AIFoundry.sh',
+      version: '1.0.0',
+      description: 'Prepaid capability-gated AI foundry for autonomous agents & web applications.'
+    });
   }
 
-  const host = c.req.header('host') || 'api.aifoundry.sh';
-  return c.json({
-    name: 'AIFoundry.sh x402 Monetized Edge Gateway',
-    brand: 'AIFoundry.sh',
-    version: '1.0.0',
-    description: 'Prepaid capability-gated AI foundry for autonomous agents & web applications.',
-    skus: [
-      {
-        id: 'T10K',
-        name: 'Token Block 10K',
-        price_usd: 0.05,
-        budget_in: 10000,
-        budget_out: 10000,
-        description: '10,000 input tokens and 10,000 output tokens for agent execution.'
-      },
-      {
-        id: 'M10',
-        name: '10-Minute Wall Clock Grant',
-        price_usd: 0.05,
-        ttl_seconds: 600,
-        description: '10 minutes execution time window for complex background tasks.'
-      }
-    ],
-    tools: [
-      {
-        name: 'openspec.plan',
-        endpoint: '/v1/tools/openspec.plan',
-        method: 'POST',
-        sku: 'T10K',
-        price_usd: 0.05,
-        status: 'production',
-        description: 'Generates structured OpenSpec architectural proposals via DeepSeek / Nemotron AI.'
-      },
-      {
-        name: 'nemotron.chat',
-        endpoint: '/v1/tools/nemotron.chat',
-        method: 'POST',
-        sku: 'T10K',
-        price_usd: 0.05,
-        status: 'production',
-        description: 'Direct completion interface to DeepSeek R1 / NVIDIA Nemotron.'
-      },
-      {
-        name: 'review.kimi',
-        endpoint: '/v1/tools/review.kimi',
-        method: 'POST',
-        sku: 'T10K',
-        price_usd: 0.05,
-        status: 'production',
-        description: 'Automated Alibaba Kimi code review & token receipt meter.'
-      },
-      {
-        name: 'audit.cf',
-        endpoint: '/v1/tools/audit.cf',
-        method: 'POST',
-        sku: 'T10K',
+  if (c.env.ASSETS) {
+    const url = new URL(c.req.url);
+    url.pathname = '/index.html';
+    return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+  }
+
+  return c.json({ status: 'ok', name: 'AIFoundry.sh x402 Gateway' });
+});
         price_usd: 0.05,
         status: 'production',
         description: 'Cloudflare Workers configuration & security audit skill.'
