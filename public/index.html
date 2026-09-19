@@ -128,14 +128,11 @@
     }
   }
   </script>
-
-  <!-- Babel Standalone -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="min-h-screen cosmic-grid bg-[#030712] text-gray-100 antialiased selection:bg-cyan-500 selection:text-black">
   <div id="root"></div>
 
-  <!-- Main React Frontend Script -->
-  <script type="text/babel" data-type="module" data-presets="react" src="app.jsx"></script>
+  <!-- Main React Frontend Script (Native ES Module) -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>

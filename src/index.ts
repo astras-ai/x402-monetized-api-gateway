@@ -17,7 +17,7 @@ type Bindings = {
   ASSETS?: any;
 };
 
-// Supported Settlement Networks for x402 Gateway (16 Multi-Chain Treasury Vaults)
+// Supported Settlement Networks for x402 Gateway (EVM USDC Universal Registry)
 const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: string; payTo: string; isTestnet: boolean }> = {
   'base': {
     name: 'Base Mainnet',
@@ -31,20 +31,6 @@ const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: strin
     chainId: 1,
     usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
-    isTestnet: false
-  },
-  'solana': {
-    name: 'Solana Mainnet',
-    chainId: 'solana-mainnet',
-    usdc: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    payTo: '7yRvqZBC52CCiJbcdTFN13oHyfUuKib9NZpAUAXddNTN',
-    isTestnet: false
-  },
-  'bitcoin': {
-    name: 'Bitcoin Mainnet & L402',
-    chainId: 'bitcoin-mainnet',
-    usdc: 'N/A (BTC / L402 Sats)',
-    payTo: 'bc1q2maw972h5eegt0njqm0z5vcqfv69vzlu7066q6',
     isTestnet: false
   },
   'polygon': {
@@ -65,34 +51,6 @@ const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: strin
     name: 'Optimism Mainnet',
     chainId: 10,
     usdc: '0x0b2C639c533813f4Aa9D7837CAf62653d097F853',
-    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
-    isTestnet: false
-  },
-  'tron': {
-    name: 'TRON Network',
-    chainId: 728126428,
-    usdc: 'TEkxiTehnPSmSe2XMPrMKqM8ppXu5P47d5',
-    payTo: 'TGiRqgrbUWGWjbqzC9krVk4XbS3MXMFpzY',
-    isTestnet: false
-  },
-  'hyperliquid': {
-    name: 'Hyperliquid L1',
-    chainId: 999,
-    usdc: 'Native USDC',
-    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
-    isTestnet: false
-  },
-  'monad': {
-    name: 'Monad Network',
-    chainId: 10143,
-    usdc: 'Native USDC',
-    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
-    isTestnet: false
-  },
-  'sonic': {
-    name: 'Sonic Bridged',
-    chainId: 146,
-    usdc: '0x29219dd400f2Bf60E5a23d13Be72B486D4038894',
     payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
     isTestnet: false
   },
@@ -124,19 +82,42 @@ const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: strin
     payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
     isTestnet: false
   },
+  'sonic': {
+    name: 'Sonic Bridged',
+    chainId: 146,
+    usdc: '0x29219dd400f2Bf60E5a23d13Be72B486D4038894',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'hyperliquid': {
+    name: 'Hyperliquid L1',
+    chainId: 999,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'hypervm': {
+    name: 'HyperVM L2',
+    chainId: 998,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
+  'monad': {
+    name: 'Monad Network',
+    chainId: 10143,
+    usdc: 'Native USDC',
+    payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
+    isTestnet: false
+  },
   'plasma': {
     name: 'Plasma L2',
     chainId: 9999,
     usdc: 'Native USDC',
     payTo: '0x003cC678764C8143a4b92370acB40e3B41319016',
     isTestnet: false
-  },
-  'cosmos': {
-    name: 'Cosmos / Noble',
-    chainId: 'noble-1',
-    usdc: 'uusdc',
-    payTo: 'cosmos10yd06xk59aznrcvzdppuxu9z2e0tf9a65gccqc',
-    isTestnet: false
+  }
+};
   },
   'aptos': {
     name: 'Aptos Mainnet',

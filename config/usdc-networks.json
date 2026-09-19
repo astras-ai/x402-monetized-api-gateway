@@ -17,24 +17,6 @@
     "symbol": "USDC",
     "decimals": 6
   },
-  "solana": {
-    "network": "solana",
-    "name": "Solana Mainnet",
-    "chainId": "solana-mainnet",
-    "usdc": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "payTo": "7yRvqZBC52CCiJbcdTFN13oHyfUuKib9NZpAUAXddNTN",
-    "symbol": "USDC",
-    "decimals": 6
-  },
-  "bitcoin": {
-    "network": "bitcoin",
-    "name": "Bitcoin Mainnet & L402",
-    "chainId": "bitcoin-mainnet",
-    "usdc": "N/A (BTC / L402 Sats)",
-    "payTo": "bc1q2maw972h5eegt0njqm0z5vcqfv69vzlu7066q6",
-    "symbol": "BTC",
-    "decimals": 8
-  },
   "polygon": {
     "network": "polygon",
     "name": "Polygon PoS",
@@ -58,42 +40,6 @@
     "name": "Optimism Mainnet",
     "chainId": 10,
     "usdc": "0x0b2C639c533813f4Aa9D7837CAf62653d097F853",
-    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
-    "symbol": "USDC",
-    "decimals": 6
-  },
-  "tron": {
-    "network": "tron",
-    "name": "TRON Network",
-    "chainId": 728126428,
-    "usdc": "TEkxiTehnPSmSe2XMPrMKqM8ppXu5P47d5",
-    "payTo": "TGiRqgrbUWGWjbqzC9krVk4XbS3MXMFpzY",
-    "symbol": "USDT / USDC",
-    "decimals": 6
-  },
-  "hyperliquid": {
-    "network": "hyperliquid",
-    "name": "Hyperliquid L1",
-    "chainId": 999,
-    "usdc": "Native USDC",
-    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
-    "symbol": "USDC",
-    "decimals": 6
-  },
-  "monad": {
-    "network": "monad",
-    "name": "Monad Network",
-    "chainId": 10143,
-    "usdc": "Native USDC",
-    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
-    "symbol": "USDC",
-    "decimals": 6
-  },
-  "sonic": {
-    "network": "sonic",
-    "name": "Sonic (Bridged)",
-    "chainId": 146,
-    "usdc": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
     "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
     "symbol": "USDC",
     "decimals": 6
@@ -134,30 +80,48 @@
     "symbol": "USDC",
     "decimals": 6
   },
+  "sonic": {
+    "network": "sonic",
+    "name": "Sonic (Bridged)",
+    "chainId": 146,
+    "usdc": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
+    "symbol": "USDC",
+    "decimals": 6
+  },
+  "hyperliquid": {
+    "network": "hyperliquid",
+    "name": "Hyperliquid L1",
+    "chainId": 999,
+    "usdc": "Native USDC",
+    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
+    "symbol": "USDC",
+    "decimals": 6
+  },
+  "hypervm": {
+    "network": "hypervm",
+    "name": "HyperVM L2",
+    "chainId": 998,
+    "usdc": "Native USDC",
+    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
+    "symbol": "USDC",
+    "decimals": 6
+  },
+  "monad": {
+    "network": "monad",
+    "name": "Monad Network",
+    "chainId": 10143,
+    "usdc": "Native USDC",
+    "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
+    "symbol": "USDC",
+    "decimals": 6
+  },
   "plasma": {
     "network": "plasma",
     "name": "Plasma L2",
     "chainId": 9999,
     "usdc": "Native USDC",
     "payTo": "0x003cC678764C8143a4b92370acB40e3B41319016",
-    "symbol": "USDC",
-    "decimals": 6
-  },
-  "cosmos": {
-    "network": "cosmos",
-    "name": "Cosmos / Noble",
-    "chainId": "noble-1",
-    "usdc": "uusdc",
-    "payTo": "cosmos10yd06xk59aznrcvzdppuxu9z2e0tf9a65gccqc",
-    "symbol": "USDC",
-    "decimals": 6
-  },
-  "aptos": {
-    "network": "aptos",
-    "name": "Aptos Mainnet",
-    "chainId": 1,
-    "usdc": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-    "payTo": "0x2d041406ed1f2240872394b6d7a3471b7a23ceef116755bbc695f9e496cd3ce4",
     "symbol": "USDC",
     "decimals": 6
   }
