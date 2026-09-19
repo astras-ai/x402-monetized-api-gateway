@@ -368,7 +368,7 @@ app.get('/health', (c) => {
 // GET / — Catalog of Tools and SKUs (or HTML UI if browser)
 app.get('/', async (c) => {
   const accept = c.req.header('accept') || '';
-  if (accept.includes('text/html') && c.env.ASSETS) {
+  if ((accept.includes('text/html') || accept.includes('*/*') || !accept) && c.env.ASSETS) {
     return c.env.ASSETS.fetch(c.req.raw);
   }
 
