@@ -19,7 +19,7 @@ for file in $CONFIG_FILES; do
       ERRORS=$((ERRORS + 1))
     fi
 
-    if grep -i -E "0x71C7656EC7ab88b098defB751B7401B5f6d8976F" "$file"; then
+    if grep -i -E "0x71C7[0-9a-fA-F]{34}" "$file"; then
       echo "❌ ERROR: Found unsafe public tutorial address in $file!"
       ERRORS=$((ERRORS + 1))
     fi

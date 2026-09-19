@@ -4,7 +4,7 @@ export async function handleAuditCf(env: any, body: any) {
   const wranglerConfig = body?.wrangler_config || body?.config || '';
 
   const hasPayToInVars = /PAY_TO\s*=/i.test(wranglerConfig) || /"PAY_TO"\s*:/i.test(wranglerConfig);
-  const hasHardcodedWallet = /0x71C7656EC7ab88b098defB751B7401B5f6d8976F/i.test(wranglerConfig);
+  const hasHardcodedWallet = /0x71C7[0-9a-fA-F]{34}/i.test(wranglerConfig);
   const hasJwtSecretInVars = /JWT_SECRET\s*=/i.test(wranglerConfig) || /"JWT_SECRET"\s*:/i.test(wranglerConfig);
 
   const issues: string[] = [];

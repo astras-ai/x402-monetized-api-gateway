@@ -1,1367 +1,287 @@
-import { DurableObject } from "cloudflare:workers";
-import { Hono } from "hono";
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { mintGrantToken, verifyGrantToken, revokeGrantToken, deductGrantBudget, getGrantUsage } from './session';
+import { runNemotron } from './nemotron';
+import { handleOpenSpecPlan } from './tools/openspec-plan';
+import { handleReviewKimi } from './tools/review-kimi';
+import { handleAuditCf } from './tools/audit-cf';
+import { handleDesign402 } from './tools/design-402';
 
-// Backend Internationalization Dictionaries
-const BACKEND_TRANSLATIONS: Record<string, Record<string, string>> = {
-  en: {
-    route_not_found: "Route Not Found in x402 Gateway",
-    route_not_found_hint: "Configure a route in the x402 Gateway Dashboard.",
-    invalid_api_key: "Invalid or revoked x402 API key.",
-    unauthorized: "Unauthorized",
-    payment_required: "HTTP 402 Payment Required: This endpoint requires a micro-payment of ${price} USD / USDC.",
-    insufficient_balance: "API Key balance (${balance}) is insufficient for route price (${price}). Please top up.",
-    sandbox_hint: "Send header 'X-402-Sandbox-Key: sandbox_demo' or use the Developer Portal to simulate 1-click payment settlement.",
-    settled_status: "PAID_AND_VERIFIED",
-    ai_prompt_received: "Prompt received"
-  },
-  "en-GB": {
-    route_not_found: "Route Not Found in x402 Gateway",
-    route_not_found_hint: "Configure a route in the x402 Gateway Dashboard.",
-    invalid_api_key: "Invalid or revoked x402 API key.",
-    unauthorized: "Authorisation required",
-    payment_required: "HTTP 402 Payment Required: This endpoint requires a micro-payment of ${price} USD / USDC.",
-    insufficient_balance: "API Key balance (${balance}) is insufficient for route price (${price}). Please top up.",
-    sandbox_hint: "Send header 'X-402-Sandbox-Key: sandbox_demo' or use the Developer Portal to simulate 1-click payment settlement.",
-    settled_status: "PAID_AND_VERIFIED",
-    ai_prompt_received: "Prompt received"
-  },
-  es: {
-    route_not_found: "Ruta no encontrada en la pasarela x402",
-    route_not_found_hint: "Configure una ruta en el panel de control de x402 Gateway.",
-    invalid_api_key: "Clave de API x402 no válida o revocada.",
-    unauthorized: "No autorizado",
-    payment_required: "HTTP 402 Pago Requerido: Este punto de enlace requiere un micropago de ${price} USD / USDC.",
-    insufficient_balance: "El saldo de la clave API (${balance}) es insuficiente para el precio (${price}). Por favor recargue.",
-    sandbox_hint: "Envíe el encabezado 'X-402-Sandbox-Key: sandbox_demo' o use el Portal de desarrolladores para simular el pago.",
-    settled_status: "PAGADO_Y_VERIFICADO",
-    ai_prompt_received: "Prompt recibido"
-  },
-  fr: {
-    route_not_found: "Route introuvable dans la passerelle x402",
-    route_not_found_hint: "Configurez une route dans le tableau de bord x402 Gateway.",
-    invalid_api_key: "Clé API x402 invalide ou révoquée.",
-    unauthorized: "Non autorisé",
-    payment_required: "HTTP 402 Paiement Requis : Cet endpoint nécessite un micropaiement de ${price} USD / USDC.",
-    insufficient_balance: "Solde de la clé API (${balance}) insuffisant pour le prix (${price}). Veuillez recharger.",
-    sandbox_hint: "Envoyez l'en-tête 'X-402-Sandbox-Key: sandbox_demo' ou utilisez le Portail Développeur pour simuler le règlement.",
-    settled_status: "PAYÉ_ET_VÉRIFIÉ",
-    ai_prompt_received: "Prompt reçu"
-  },
-  de: {
-    route_not_found: "Route im x402 Gateway nicht gefunden",
-    route_not_found_hint: "Konfigurieren Sie eine Route im x402 Gateway Dashboard.",
-    invalid_api_key: "Ungültiger oder widerrufener x402 API-Schlüssel.",
-    unauthorized: "Nicht autorisiert",
-    payment_required: "HTTP 402 Zahlung Erforderlich: Dieser Endpunkt erfordert eine Mikrozahlung von ${price} USD / USDC.",
-    insufficient_balance: "Guthaben des API-Schlüssels (${balance}) reicht für Preis (${price}) nicht aus. Bitte aufladen.",
-    sandbox_hint: "Senden Sie den Header 'X-402-Sandbox-Key: sandbox_demo' oder nutzen Sie das Entwicklerportal für Testzahlungen.",
-    settled_status: "BEZAHLT_UND_VERIFIZIERT",
-    ai_prompt_received: "Prompt erhalten"
-  },
-  zh: {
-    route_not_found: "x402 网关中未找到该路由",
-    route_not_found_hint: "请在 x402 网关控制台中配置路由。",
-    invalid_api_key: "x402 API 密钥无效或已撤销。",
-    unauthorized: "未授权",
-    payment_required: "HTTP 402 需要付款：此接口需要支付 ${price} USD / USDC 的微支付。",
-    insufficient_balance: "API 密钥余额 (${balance}) 不足，无法支付此路由价格 (${price})。请充值。",
-    sandbox_hint: "发送请求头 'X-402-Sandbox-Key: sandbox_demo' 或在开发者门户中一键模拟支付结算。",
-    settled_status: "已支付并已验证",
-    ai_prompt_received: "已收到提示词"
-  },
-  ja: {
-    route_not_found: "x402 ゲートウェイでルートが見つかりません",
-    route_not_found_hint: "x402 ゲートウェイダッシュボードでルートを設定してください。",
-    invalid_api_key: "無効または取り消された x402 API キーです。",
-    unauthorized: "未認証",
-    payment_required: "HTTP 402 支払いが必要です: このエンドポイントには ${price} USD / USDC のマイクロ決済が必要です。",
-    insufficient_balance: "API キーの残高 (${balance}) がルート価格 (${price}) に不足しています。チャージしてください。",
-    sandbox_hint: "ヘッダー 'X-402-Sandbox-Key: sandbox_demo' を送信するか、開発者ポータルで1クリック決済テストを行ってください。",
-    settled_status: "支払い済み・検証完了",
-    ai_prompt_received: "プロンプトを受信"
-  },
-  pt: {
-    route_not_found: "Rota não encontrada no Gateway x402",
-    route_not_found_hint: "Configure uma rota no Painel do Gateway x402.",
-    invalid_api_key: "Chave de API x402 inválida ou revogada.",
-    unauthorized: "Não autorizado",
-    payment_required: "HTTP 402 Pagamento Necessário: Este endpoint requer um micropagamento de ${price} USD / USDC.",
-    insufficient_balance: "Saldo da chave de API (${balance}) insuficiente para o preço (${price}). Por favor, recarregue.",
-    sandbox_hint: "Envie o cabeçalho 'X-402-Sandbox-Key: sandbox_demo' ou use o Portal do Desenvolvedor para simular o pagamento.",
-    settled_status: "PAGO_E_VERIFICADO",
-    ai_prompt_received: "Prompt recebido"
-  },
-  ar: {
-    route_not_found: "المسار غير موجود في بوابة x402",
-    route_not_found_hint: "قم بتكوين مسار في لوحة تحكم بوابة x402.",
-    invalid_api_key: "مفتاح API x402 غير صالحة أو ملغاة.",
-    unauthorized: "غير مصرح به",
-    payment_required: "HTTP 402 الدفع مطلوب: ينطوي هذا الإجراء على دفعة صغيرة بقيمة ${price} USD / USDC.",
-    insufficient_balance: "رصيد مفتاح API (${balance}) غير كافٍ لسعر المسار (${price}). يرجى إعادة الشحن.",
-    sandbox_hint: "أرسل رأس 'X-402-Sandbox-Key: sandbox_demo' أو استخدم بوابات المطورين لمحاكاة التسوية بنقرة واحدة.",
-    settled_status: "تم_الدفع_والتحقق",
-    ai_prompt_received: "تم استلام الطلب"
-  }
+type Bindings = {
+  NETWORK?: string;
+  PAY_TO?: string;
+  JWT_SECRET?: string;
+  FACILITATOR_URL?: string;
+  NEMOTRON_URL?: string;
+  NEMOTRON_TOKEN?: string;
+  AI?: any;
 };
 
-function getClientLang(c: any): string {
-  const queryLang = c.req.query("lang") || c.req.header("x-language");
-  if (queryLang) {
-    const qLower = queryLang.toLowerCase();
-    if (qLower === "en-gb" || qLower === "en-uk") return "en-GB";
-    if (BACKEND_TRANSLATIONS[qLower]) return qLower;
-  }
-  const acceptLang = (c.req.header("accept-language") || "").toLowerCase();
-  if (acceptLang.includes("en-gb") || acceptLang.includes("en-uk")) {
-    return "en-GB";
-  }
-  for (const lang of ["es", "fr", "de", "zh", "ja", "pt", "ar"]) {
-    if (acceptLang.includes(lang)) {
-      return lang;
-    }
-  }
-  return "en";
-}
+const app = new Hono<{ Bindings: Bindings }>();
 
-function t(lang: string, key: string, params: Record<string, string> = {}): string {
-  const langDict = BACKEND_TRANSLATIONS[lang] || BACKEND_TRANSLATIONS["en"];
-  let str = langDict[key] || BACKEND_TRANSLATIONS["en"][key] || key;
-  for (const [pKey, pVal] of Object.entries(params)) {
-    str = str.replace(new RegExp(`\\$\\{${pKey}\\}`, "g"), pVal);
-  }
-  return str;
-}
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-AIFoundry-Grant',
+    'X-402-Sandbox-Key',
+    'X-402-Settle-Paid',
+    'X-Payment-Header'
+  ],
+  exposeHeaders: [
+    'X-AIFoundry-Sku',
+    'X-AIFoundry-Tool',
+    'X-AIFoundry-Budget-In',
+    'X-AIFoundry-Budget-Out',
+    'X-AIFoundry-Expires',
+    'X-AIFoundry-Jti',
+    'X-AIFoundry-Budget-Remaining',
+    'X-402-Payment-Required'
+  ]
+}));
 
-export class App extends DurableObject {
-  private app: Hono;
+// GET /health — Health Check
+app.get('/health', (c) => {
+  const env = c.env;
+  return c.json({
+    status: 'ok',
+    network: env.NETWORK || 'base-sepolia',
+    nemotron_via: env.NEMOTRON_URL ? 'cloudflared_origin' : (env.AI ? 'workers_ai' : 'embedded_llm'),
+    pay_to_configured: Boolean(env.PAY_TO && env.PAY_TO.length > 5),
+    timestamp: new Date().toISOString()
+  });
+});
 
-  constructor(ctx: DurableObjectState, env: Record<string, unknown>) {
-    super(ctx, env);
-    this.app = new Hono();
-    this.setupRoutes();
-  }
-
-  private initDatabase() {
-    this.ctx.storage.sql.exec(`
-      CREATE TABLE IF NOT EXISTS routes (
-        id TEXT PRIMARY KEY,
-        path_pattern TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        target_url TEXT,
-        price_usd REAL NOT NULL DEFAULT 0.0010,
-        allowed_methods TEXT NOT NULL DEFAULT '["GET","POST"]',
-        auth_modes TEXT NOT NULL DEFAULT '["l402","crypto","api_key"]',
-        is_active INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS api_keys (
-        id TEXT PRIMARY KEY,
-        key_secret TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        balance_usd REAL NOT NULL DEFAULT 0.0,
-        total_spent REAL NOT NULL DEFAULT 0.0,
-        status TEXT NOT NULL DEFAULT 'active',
-        created_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS ledger_tx (
-        id TEXT PRIMARY KEY,
-        api_key_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        amount_usd REAL NOT NULL,
-        description TEXT NOT NULL,
-        ref_id TEXT,
-        created_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS invoices (
-        id TEXT PRIMARY KEY,
-        route_id TEXT NOT NULL,
-        price_usd REAL NOT NULL,
-        asset TEXT NOT NULL DEFAULT 'USDC',
-        payment_hash TEXT NOT NULL,
-        preimage TEXT,
-        macaroon TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        expires_at INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS request_logs (
-        id TEXT PRIMARY KEY,
-        timestamp INTEGER NOT NULL,
-        path TEXT NOT NULL,
-        route_name TEXT NOT NULL,
-        status_code INTEGER NOT NULL,
-        method TEXT NOT NULL,
-        payment_method TEXT NOT NULL,
-        cost_usd REAL NOT NULL,
-        latency_ms INTEGER NOT NULL,
-        client_ip TEXT NOT NULL,
-        request_preview TEXT,
-        response_preview TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS env_secrets (
-        key_name TEXT PRIMARY KEY,
-        secret_value TEXT NOT NULL,
-        category TEXT NOT NULL DEFAULT 'general',
-        description TEXT,
-        updated_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS security_oidc_config (
-        id INTEGER PRIMARY KEY DEFAULT 1,
-        mode TEXT NOT NULL DEFAULT 'dev_open',
-        cloudflare_access_domain TEXT NOT NULL DEFAULT 'admin-auth.cloudflare.com',
-        oidc_client_id TEXT NOT NULL DEFAULT 'cf_access_client_402_x',
-        require_mfa INTEGER NOT NULL DEFAULT 1,
-        allowed_domains TEXT NOT NULL DEFAULT '["@company.com", "admin@cloudflare.com"]',
-        active_session_user TEXT,
-        updated_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS github_integration (
-        id INTEGER PRIMARY KEY DEFAULT 1,
-        gh_username TEXT,
-        gh_token TEXT,
-        connected_at INTEGER,
-        target_repo TEXT DEFAULT 'x402-gateway-cloudflare',
-        last_sync_time INTEGER
-      );
-    `);
-
-    // Seed default secrets if empty
-    const countSecrets = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM env_secrets`).one().cnt as number;
-    if (countSecrets === 0) {
-      const now = Date.now();
-      this.ctx.storage.sql.exec(`
-        INSERT INTO env_secrets (key_name, secret_value, category, description, updated_at)
-        VALUES 
-	        ('OPENAI_API_KEY', 'sk-proj-x402gatewaydemo999888777666555444333', 'ai', 'Used for AI LLM completion proxy fallback', ?),
-	        ('STRIPE_SECRET_KEY', 'sk_test_51Nx402GatewayStripeLiveTokenDemo', 'payments', 'Stripe key for automated API key credit top-ups', ?),
-	        ('LND_REST_MACAROON', '02000102030405060708090a0b0c0d0e0f10111213141516', 'lightning', 'LND REST admin macaroon for Lightning L402 invoice generation', ?),
-	        ('SOLANA_RPC_URL', 'https://api.mainnet-beta.solana.com', 'web3', 'Solana RPC endpoint for USDC micro-settlement verification', ?),
-	        ('BASE_RPC_URL', 'https://mainnet.base.org', 'web3', 'Base EVM RPC for instant $USDC token settlement', ?),
-	        ('PAY_WALLET', '0x71C7656EC7ab88b098defB751B7401B5f6d8976F', 'web3', 'Primary EVM / Base receiving wallet for x402 micropayments', ?),
-	        ('MAX_FREE_CALLS', '5', 'rate_limit', 'Maximum free trial requests allowed per IP before HTTP 402 challenge', ?)
-      `, now, now, now, now, now);
-    }
-
-    // Seed default OIDC security config if empty
-    const countOidc = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM security_oidc_config`).one().cnt as number;
-    if (countOidc === 0) {
-      this.ctx.storage.sql.exec(`
-        INSERT INTO security_oidc_config (id, mode, cloudflare_access_domain, oidc_client_id, require_mfa, allowed_domains, active_session_user, updated_at)
-        VALUES (1, 'dev_open', 'myorg.cloudflareaccess.com', 'cf_access_client_x402_gateway', 1, '["@company.com","admin@cf.dev"]', 'Dev Sandbox Admin', ?)
-      `, Date.now());
-    }
-
-    // Seed GitHub integration status
-    const countGh = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM github_integration`).one().cnt as number;
-    if (countGh === 0) {
-      this.ctx.storage.sql.exec(`
-        INSERT INTO github_integration (id, gh_username, gh_token, connected_at, target_repo, last_sync_time)
-        VALUES (1, '', '', NULL, 'x402-gateway-cloudflare', NULL)
-      `);
-    }
-
-    // Seed initial routes if table is empty
-    const countRoutes = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM routes`).one().cnt as number;
-    if (countRoutes === 0) {
-      const now = Date.now();
-      this.ctx.storage.sql.exec(`
-        INSERT INTO routes (id, path_pattern, name, type, target_url, price_usd, allowed_methods, auth_modes, is_active, created_at)
-        VALUES 
-        ('route_ai', '/v1/ai/completions', 'AI LLM & Image Generation Proxy', 'builtin_ai', '', 0.0015, '["POST"]', '["l402","crypto","api_key"]', 1, ?),
-        ('route_scrape', '/v1/scrape', 'Web Scraper & Markdown Extractor', 'builtin_scraper', '', 0.0020, '["GET","POST"]', '["l402","crypto","api_key"]', 1, ?),
-        ('route_exec', '/v1/exec', 'Code Execution Sandbox API', 'builtin_sandbox', '', 0.0010, '["POST"]', '["l402","crypto","api_key"]', 1, ?),
-        ('route_qr', '/v1/devtools/qr', 'QR Code Generator API', 'builtin_devtools', '', 0.0005, '["GET","POST"]', '["l402","crypto","api_key"]', 1, ?),
-        ('route_coingecko', '/proxy/crypto-prices', 'Live Crypto Price Feed Proxy', 'custom_proxy', 'https://api.coingecko.com/api/v3/simple/price', 0.0005, '["GET"]', '["l402","crypto","api_key"]', 1, ?)
-      `, now, now, now, now, now);
-    }
-
-    // Seed initial API Key if empty
-    const countKeys = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM api_keys`).one().cnt as number;
-    if (countKeys === 0) {
-      const now = Date.now();
-      const keyId = 'key_' + Math.random().toString(36).substring(2, 10);
-      const keySecret = 'x402_live_demo888899990000';
-      this.ctx.storage.sql.exec(`
-        INSERT INTO api_keys (id, key_secret, name, balance_usd, total_spent, status, created_at)
-        VALUES (?, ?, 'Developer Portal Demo Key', 25.00, 0.00, 'active', ?)
-      `, keyId, keySecret, now);
-
-      this.ctx.storage.sql.exec(`
-        INSERT INTO ledger_tx (id, api_key_id, type, amount_usd, description, ref_id, created_at)
-        VALUES (?, ?, 'topup', 25.00, 'Initial Welcome Deposit', 'welcome_faucet', ?)
-      `, 'tx_init_' + Date.now(), keyId, now);
-    }
-  }
-
-  private setupRoutes() {
-    this.app.use("*", async (c, next) => {
-      this.initDatabase();
-      await next();
-    });
-
-    // STATS & DASHBOARD APIs
-    this.app.get("/api/stats", (c) => {
-      const totalRev = this.ctx.storage.sql.exec(`
-        SELECT COALESCE(SUM(cost_usd), 0) as total FROM request_logs WHERE status_code = 200
-      `).one().total as number;
-
-      const totalRequests = this.ctx.storage.sql.exec(`
-        SELECT COUNT(*) as cnt FROM request_logs
-      `).one().cnt as number;
-
-      const paidRequests = this.ctx.storage.sql.exec(`
-        SELECT COUNT(*) as cnt FROM request_logs WHERE status_code = 200 AND cost_usd > 0
-      `).one().cnt as number;
-
-      const blocked402 = this.ctx.storage.sql.exec(`
-        SELECT COUNT(*) as cnt FROM request_logs WHERE status_code = 402
-      `).one().cnt as number;
-
-      const avgLatency = this.ctx.storage.sql.exec(`
-        SELECT COALESCE(AVG(latency_ms), 0) as avg_lat FROM request_logs WHERE status_code = 200
-      `).one().avg_lat as number;
-
-      const activeKeys = this.ctx.storage.sql.exec(`
-        SELECT COUNT(*) as cnt FROM api_keys WHERE status = 'active'
-      `).one().cnt as number;
-
-      const routeStats = this.ctx.storage.sql.exec(`
-        SELECT route_name, COUNT(*) as calls, COALESCE(SUM(cost_usd), 0) as revenue
-        FROM request_logs
-        GROUP BY route_name
-        ORDER BY revenue DESC
-      `).toArray();
-
-      const methodStats = this.ctx.storage.sql.exec(`
-        SELECT payment_method, COUNT(*) as count, COALESCE(SUM(cost_usd), 0) as revenue
-        FROM request_logs
-        GROUP BY payment_method
-      `).toArray();
-
-      const recentLogs = this.ctx.storage.sql.exec(`
-        SELECT * FROM request_logs ORDER BY timestamp DESC LIMIT 20
-      `).toArray();
-
-      return c.json({
-        totalRevenueUsd: totalRev,
-        totalRequests,
-        paidRequests,
-        blocked402Requests: blocked402,
-        avgLatencyMs: Math.round(avgLatency),
-        activeKeys,
-        routeStats,
-        methodStats,
-        recentLogs
-      });
-    });
-
-    // GATEWAY ROUTES CRUD
-    this.app.get("/api/routes", (c) => {
-      const routes = this.ctx.storage.sql.exec(`SELECT * FROM routes ORDER BY created_at DESC`).toArray();
-      return c.json(routes);
-    });
-
-    this.app.post("/api/routes", async (c) => {
-      const body = await c.req.json();
-      const id = 'route_' + Math.random().toString(36).substring(2, 9);
-      const now = Date.now();
-
-      this.ctx.storage.sql.exec(`
-        INSERT INTO routes (id, path_pattern, name, type, target_url, price_usd, allowed_methods, auth_modes, is_active, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-      `, 
-        id, 
-        body.path_pattern || '/proxy/custom', 
-        body.name || 'New Custom Gateway Route', 
-        body.type || 'custom_proxy', 
-        body.target_url || '', 
-        body.price_usd ?? 0.0010, 
-        JSON.stringify(body.allowed_methods || ["GET", "POST"]), 
-        JSON.stringify(body.auth_modes || ["l402", "crypto", "api_key"]),
-        now
-      );
-
-      const created = this.ctx.storage.sql.exec(`SELECT * FROM routes WHERE id = ?`, id).one();
-      return c.json(created, 201);
-    });
-
-    this.app.put("/api/routes/:id", async (c) => {
-      const id = c.req.param("id");
-      const body = await c.req.json();
-
-      this.ctx.storage.sql.exec(`
-        UPDATE routes 
-        SET path_pattern = ?, name = ?, type = ?, target_url = ?, price_usd = ?, is_active = ?
-        WHERE id = ?
-      `,
-        body.path_pattern,
-        body.name,
-        body.type,
-        body.target_url || '',
-        body.price_usd,
-        body.is_active ? 1 : 0,
-        id
-      );
-
-      const updated = this.ctx.storage.sql.exec(`SELECT * FROM routes WHERE id = ?`, id).one();
-      return c.json(updated);
-    });
-
-    this.app.delete("/api/routes/:id", (c) => {
-      const id = c.req.param("id");
-      this.ctx.storage.sql.exec(`DELETE FROM routes WHERE id = ?`, id);
-      return c.json({ success: true, deletedId: id });
-    });
-
-    // API KEYS & BALANCE MANAGEMENT
-    this.app.get("/api/keys", (c) => {
-      const keys = this.ctx.storage.sql.exec(`
-        SELECT id, key_secret, name, balance_usd, total_spent, status, created_at 
-        FROM api_keys ORDER BY created_at DESC
-      `).toArray();
-
-      const ledger = this.ctx.storage.sql.exec(`
-        SELECT * FROM ledger_tx ORDER BY created_at DESC LIMIT 30
-      `).toArray();
-
-      return c.json({ keys, ledger });
-    });
-
-    this.app.post("/api/keys", async (c) => {
-      const body = await c.req.json();
-      const id = 'key_' + Math.random().toString(36).substring(2, 9);
-      const randomHex = Array.from({length: 16}, () => Math.floor(Math.random()*16).toString(16)).join('');
-      const keySecret = `x402_live_${randomHex}`;
-      const now = Date.now();
-      const initialBalance = body.initial_balance ?? 10.00;
-
-      this.ctx.storage.sql.exec(`
-        INSERT INTO api_keys (id, key_secret, name, balance_usd, total_spent, status, created_at)
-        VALUES (?, ?, ?, ?, 0.0, 'active', ?)
-      `, id, keySecret, body.name || 'New Developer API Key', initialBalance, now);
-
-      if (initialBalance > 0) {
-        this.ctx.storage.sql.exec(`
-          INSERT INTO ledger_tx (id, api_key_id, type, amount_usd, description, ref_id, created_at)
-          VALUES (?, ?, 'topup', ?, 'Initial Account Funding', ?, ?)
-        `, 'tx_' + Date.now(), id, initialBalance, 'manual_grant', now);
+// GET / — Catalog of Tools and SKUs
+app.get('/', (c) => {
+  const host = c.req.header('host') || 'api.aifoundry.sh';
+  return c.json({
+    name: 'AIFoundry.sh x402 Monetized Edge Gateway',
+    brand: 'Astras.ai',
+    version: '1.0.0',
+    description: 'Prepaid capability-gated AI foundry for autonomous agents & web applications.',
+    skus: [
+      {
+        id: 'T10K',
+        name: 'Token Block 10K',
+        price_usd: 0.05,
+        budget_in: 10000,
+        budget_out: 10000,
+        description: '10,000 input tokens and 10,000 output tokens for agent execution.'
+      },
+      {
+        id: 'M10',
+        name: '10-Minute Wall Clock Grant',
+        price_usd: 0.05,
+        ttl_seconds: 600,
+        description: '10 minutes execution time window for complex background tasks.'
       }
-
-      const created = this.ctx.storage.sql.exec(`SELECT * FROM api_keys WHERE id = ?`, id).one();
-      return c.json(created, 201);
-    });
-
-    this.app.post("/api/keys/:id/topup", async (c) => {
-      const id = c.req.param("id");
-      const body = await c.req.json();
-      const amount = Math.max(0.10, body.amount ?? 10.00);
-      const method = body.method || 'stripe_simulated';
-      const now = Date.now();
-
-      this.ctx.storage.sql.exec(`
-        UPDATE api_keys 
-        SET balance_usd = balance_usd + ? 
-        WHERE id = ?
-      `, amount, id);
-
-      this.ctx.storage.sql.exec(`
-        INSERT INTO ledger_tx (id, api_key_id, type, amount_usd, description, ref_id, created_at)
-        VALUES (?, ?, 'topup', ?, ?, ?, ?)
-      `, 'tx_' + Date.now(), id, amount, `Top-up via ${method}`, body.tx_ref || 'topup_' + Date.now(), now);
-
-      const key = this.ctx.storage.sql.exec(`SELECT * FROM api_keys WHERE id = ?`, id).one();
-      return c.json({ success: true, key });
-    });
-
-    this.app.delete("/api/keys/:id", (c) => {
-      const id = c.req.param("id");
-      this.ctx.storage.sql.exec(`UPDATE api_keys SET status = 'revoked' WHERE id = ?`, id);
-      return c.json({ success: true, revokedId: id });
-    });
-
-    this.app.post("/api/faucet/topup", (c) => {
-      const demoKey = this.ctx.storage.sql.exec(`SELECT * FROM api_keys WHERE key_secret LIKE 'x402_live_demo%' LIMIT 1`).toArray()[0];
-      const now = Date.now();
-      
-      if (demoKey) {
-        this.ctx.storage.sql.exec(`UPDATE api_keys SET balance_usd = balance_usd + 10.00 WHERE id = ?`, demoKey.id);
-        this.ctx.storage.sql.exec(`
-          INSERT INTO ledger_tx (id, api_key_id, type, amount_usd, description, ref_id, created_at)
-          VALUES (?, ?, 'topup', 10.00, 'x402 Testnet Faucet Claim', 'faucet_claim', ?)
-        `, 'tx_faucet_' + Date.now(), demoKey.id, now);
-        return c.json({ success: true, message: "Added $10.00 test credit to demo key!", keySecret: demoKey.key_secret, newBalance: (demoKey.balance_usd as number) + 10 });
-      } else {
-        const id = 'key_faucet_' + Date.now();
-        const keySecret = 'x402_live_demo888899990000';
-        this.ctx.storage.sql.exec(`
-          INSERT INTO api_keys (id, key_secret, name, balance_usd, total_spent, status, created_at)
-          VALUES (?, ?, 'Faucet Demo Key', 10.00, 0.0, 'active', ?)
-        `, id, keySecret, now);
-        return c.json({ success: true, message: "Created demo key with $10.00 credit!", keySecret, newBalance: 10.00 });
+    ],
+    tools: [
+      {
+        name: 'openspec.plan',
+        endpoint: '/v1/tools/openspec.plan',
+        method: 'POST',
+        sku: 'T10K',
+        price_usd: 0.05,
+        status: 'production',
+        description: 'Generates structured OpenSpec architectural proposals via Nemotron AI.'
+      },
+      {
+        name: 'nemotron.chat',
+        endpoint: '/v1/tools/nemotron.chat',
+        method: 'POST',
+        sku: 'T10K',
+        price_usd: 0.05,
+        status: 'production',
+        description: 'Direct completion interface to NVIDIA Nemotron 3 120B.'
+      },
+      {
+        name: 'review.kimi',
+        endpoint: '/v1/tools/review.kimi',
+        method: 'POST',
+        sku: 'T10K',
+        price_usd: 0.05,
+        status: 'production',
+        description: 'Automated code review & token receipt meter.'
+      },
+      {
+        name: 'audit.cf',
+        endpoint: '/v1/tools/audit.cf',
+        method: 'POST',
+        sku: 'T10K',
+        price_usd: 0.05,
+        status: 'production',
+        description: 'Cloudflare Workers configuration & secret leakage audit.'
+      },
+      {
+        name: 'design.402',
+        endpoint: '/v1/tools/design.402',
+        method: 'POST',
+        sku: 'T10K',
+        price_usd: 0.05,
+        status: 'production',
+        description: 'Human-centered OpenDesign UI/UX specification generator.'
       }
-    });
+    ],
+    documentation: `https://${host}/app`
+  });
+});
 
-    // REQUEST LOGS API
-    this.app.get("/api/logs", (c) => {
-      const limit = Number(c.req.query("limit") || 50);
-      const logs = this.ctx.storage.sql.exec(`
-        SELECT * FROM request_logs ORDER BY timestamp DESC LIMIT ?
-      `, limit).toArray();
-      return c.json(logs);
-    });
+// GET /.well-known/x402 — Standard Payment Discovery
+app.get('/.well-known/x402', (c) => {
+  return c.json({
+    x402_version: 1,
+    gateway: 'AIFoundry.sh',
+    supported_networks: ['base-sepolia', 'base', 'solana', 'polygon', 'arbitrum', 'world'],
+    accepted_assets: ['USDC'],
+    default_price_usd: 0.05,
+    facilitator_url: c.env.FACILITATOR_URL || 'https://x402.org/facilitator',
+    pay_to: c.env.PAY_TO || 'PAY_TO_NOT_CONFIGURED'
+  });
+});
 
-    // ENVIRONMENT SECRETS MANAGEMENT API
-    this.app.get("/api/secrets", (c) => {
-      const secrets = this.ctx.storage.sql.exec(`SELECT * FROM env_secrets ORDER BY category, key_name`).toArray();
-      return c.json(secrets);
-    });
+// POST /v1/session/close — Revoke / Burn active JTI token
+app.post('/v1/session/close', async (c) => {
+  const authHeader = c.req.header('authorization') || c.req.header('x-aifoundry-grant') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const jwtSecret = c.env.JWT_SECRET || 'aifoundry-secret-key-tonight';
 
-    this.app.post("/api/secrets", async (c) => {
-      const body = await c.req.json();
-      const now = Date.now();
-      const keyName = (body.key_name || '').trim().toUpperCase();
-      if (!keyName) return c.json({ error: "Secret key name is required" }, 400);
+  if (!token) {
+    return c.json({ error: 'Missing token in Authorization header' }, 400);
+  }
 
-      this.ctx.storage.sql.exec(`
-        INSERT INTO env_secrets (key_name, secret_value, category, description, updated_at)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(key_name) DO UPDATE SET
-          secret_value = excluded.secret_value,
-          category = excluded.category,
-          description = excluded.description,
-          updated_at = excluded.updated_at
-      `, keyName, body.secret_value || '', body.category || 'general', body.description || '', now);
+  const verification = await verifyGrantToken(jwtSecret, token);
+  if (verification.valid && verification.claims) {
+    revokeGrantToken(verification.claims.jti);
+    return c.body(null, 204);
+  }
 
-      return c.json({ success: true, key_name: keyName, updated_at: now });
-    });
+  return c.json({ error: 'Invalid or already expired grant token' }, 400);
+});
 
-    this.app.delete("/api/secrets/:key", (c) => {
-      const key = c.req.param("key");
-      this.ctx.storage.sql.exec(`DELETE FROM env_secrets WHERE key_name = ?`, key);
-      return c.json({ success: true, deletedKey: key });
-    });
+// Middleware / Route Handler for All Tool Calls under /v1/tools/:toolName
+app.post('/v1/tools/:toolName', async (c) => {
+  const toolName = c.req.param('toolName');
+  const jwtSecret = c.env.JWT_SECRET || 'aifoundry-secret-key-tonight';
+  const network = c.env.NETWORK || 'base-sepolia';
 
-    // CLOUDFLARE ACCESS OIDC / MFA SECURITY SETTINGS API
-    this.app.get("/api/security/oidc", (c) => {
-      const config = this.ctx.storage.sql.exec(`SELECT * FROM security_oidc_config WHERE id = 1`).one();
-      return c.json(config);
-    });
+  let body: any = {};
+  try {
+    body = await c.req.json();
+  } catch (e) {
+    body = {};
+  }
 
-    this.app.post("/api/security/oidc", async (c) => {
-      const body = await c.req.json();
-      const now = Date.now();
+  // Check grant token provided in request
+  const authHeader = c.req.header('authorization') || c.req.header('x-aifoundry-grant') || '';
+  let token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-      this.ctx.storage.sql.exec(`
-        UPDATE security_oidc_config
-        SET mode = ?,
-            cloudflare_access_domain = ?,
-            oidc_client_id = ?,
-            require_mfa = ?,
-            allowed_domains = ?,
-            active_session_user = ?,
-            updated_at = ?
-        WHERE id = 1
-      `,
-        body.mode || 'dev_open',
-        body.cloudflare_access_domain || 'myorg.cloudflareaccess.com',
-        body.oidc_client_id || 'cf_access_client_x402',
-        body.require_mfa ? 1 : 0,
-        JSON.stringify(body.allowed_domains || ["@company.com"]),
-        body.active_session_user || 'Admin User (Dev Mode)',
-        now
-      );
+  // Check Sandbox / Simulated Settle flags for rapid testing
+  const sandboxHeader = c.req.header('x-402-sandbox-key') || c.req.header('x-402-settle-paid') || c.req.header('x-payment-header');
+  const isSandboxPay = sandboxHeader && (sandboxHeader === 'sandbox_demo' || sandboxHeader === 'true' || sandboxHeader.length > 10);
 
-      const updated = this.ctx.storage.sql.exec(`SELECT * FROM security_oidc_config WHERE id = 1`).one();
-      return c.json({ success: true, config: updated });
-    });
+  let grantClaims: any = null;
 
-    this.app.post("/api/security/oidc/test-handshake", async (c) => {
-      const config = this.ctx.storage.sql.exec(`SELECT * FROM security_oidc_config WHERE id = 1`).one();
-      const isMfaActive = Boolean(config.require_mfa);
-      const mode = config.mode as string;
+  if (token) {
+    const verifyResult = await verifyGrantToken(jwtSecret, token);
+    if (verifyResult.valid) {
+      grantClaims = verifyResult.claims;
+    }
+  }
 
-      return c.json({
-        success: true,
-        authenticated: true,
-        mode,
-        user: mode === 'enforced' ? 'admin@yourcompany.com (Cloudflare Access SSO)' : 'Dev Sandbox Administrator',
-        mfaVerified: isMfaActive,
-        mfaType: isMfaActive ? 'TOTP / WebAuthn Hardware Key' : 'Bypassed (Dev Mode)',
-        idTokenClaims: {
-          sub: "usr_cf_access_889900",
-          email: "admin@yourcompany.com",
-          iss: `https://${config.cloudflare_access_domain}`,
-          aud: config.oidc_client_id,
-          identity_provider: "Cloudflare Zero Trust OIDC",
-          mfa_authenticated: isMfaActive,
-          exp: Math.floor(Date.now() / 1000) + 3600
+  // If no valid grant token, but payment was simulated / settled in header
+  if (!grantClaims && isSandboxPay) {
+    const mintResult = await mintGrantToken(jwtSecret, toolName, 'T10K', 'sandbox_user', 600, 10000, 10000);
+    token = mintResult.token;
+    grantClaims = mintResult.claims;
+  }
+
+  // If STILL no valid grant, trigger HTTP 402 Payment Required challenge
+  if (!grantClaims) {
+    c.header('X-402-Payment-Required', 'true');
+    c.header('WWW-Authenticate', `L402 asset="USDC", price="0.05", network="${network}"`);
+    return c.json(
+      {
+        error: 'HTTP 402 Payment Required',
+        message: 'Payment required to access AIFoundry tool. Settle $0.05 USDC to receive a scoped capability grant.',
+        x402: {
+          version: 1,
+          price_usd: 0.05,
+          asset: 'USDC',
+          network,
+          pay_to: c.env.PAY_TO || 'PAY_TO_SECRET_REQUIRED',
+          facilitator: c.env.FACILITATOR_URL || 'https://x402.org/facilitator',
+          skus: ['T10K', 'M10']
         }
-      });
-    });
-
-    // GITHUB OAUTH & REPOSITORY PUSH API
-    this.app.get("/api/github/status", (c) => {
-      const status = this.ctx.storage.sql.exec(`SELECT * FROM github_integration WHERE id = 1`).one();
-      return c.json(status);
-    });
-
-    this.app.post("/api/github/connect", async (c) => {
-      const body = await c.req.json();
-      const username = (body.gh_username || '').trim();
-      const token = (body.gh_token || '').trim();
-      const targetRepo = body.target_repo || 'x402-gateway-cloudflare';
-      const now = Date.now();
-
-      this.ctx.storage.sql.exec(`
-        UPDATE github_integration
-        SET gh_username = ?, gh_token = ?, connected_at = ?, target_repo = ?
-        WHERE id = 1
-      `, username, token, now, targetRepo);
-
-      return c.json({
-        success: true,
-        connected: Boolean(username),
-        gh_username: username,
-        target_repo: targetRepo
-      });
-    });
-
-    this.app.post("/api/github/push", async (c) => {
-      const gh = this.ctx.storage.sql.exec(`SELECT * FROM github_integration WHERE id = 1`).one();
-      const now = Date.now();
-
-      this.ctx.storage.sql.exec(`
-        UPDATE github_integration
-        SET last_sync_time = ?
-        WHERE id = 1
-      `, now);
-
-      const username = (gh.gh_username as string) || "developer";
-      const repoName = (gh.target_repo as string) || "x402-gateway-cloudflare";
-
-      return c.json({
-        success: true,
-        repoUrl: `https://github.com/${username}/${repoName}`,
-        commitSha: "sha_" + Math.random().toString(36).substring(2, 10),
-        pushedAt: now,
-        filesPushed: 6,
-        branch: "main",
-        message: "Successfully synchronized x402 Gateway codebase to GitHub repository!"
-      });
-    });
-
-    // DYNAMIC CLOUDFLARE WORKER ENGINE & ISOLATE EVALUATOR
-    this.app.get("/api/worker/telemetry", (c) => {
-      const routesCount = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM routes`).one().cnt as number;
-      const secretsCount = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM env_secrets`).one().cnt as number;
-      const keysCount = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM api_keys`).one().cnt as number;
-      const logsCount = this.ctx.storage.sql.exec(`SELECT COUNT(*) as cnt FROM request_logs`).one().cnt as number;
-
-      return c.json({
-        workerRuntime: "Cloudflare Workers / V8 Isolate",
-        durableObject: "App (DO SQL State Engine)",
-        status: "ACTIVE",
-        uptimeSeconds: Math.floor(process.uptime ? process.uptime() : 3600),
-        memoryAllocatedMb: "128MB (Standard Isolate)",
-        sqliteTables: {
-          routes: routesCount,
-          env_secrets: secretsCount,
-          api_keys: keysCount,
-          request_logs: logsCount
-        },
-        supportedProtocols: [
-          "HTTP 402 Payment Required",
-          "L402 / Lightning Bolt11 Macaroons",
-          "EVM / Base / Solana USDC Micro-settlement",
-          "Bearer API Key Dynamic Deduction"
-        ],
-        dynamicCapabilities: [
-          "Live proxy route registration without redeploying",
-          "Dynamic environment variable lookup per request",
-          "In-isolate V8 JavaScript code execution",
-          "Real-time CORS & Header transformation pipeline"
-        ]
-      });
-    });
-
-    this.app.post("/api/worker/eval", async (c) => {
-      const body = await c.req.json();
-      const code = body.code || "return { status: 'ok', worker_timestamp: Date.now(), message: 'Hello from Cloudflare Worker isolate!' };";
-      
-      const startTime = performance.now();
-      let result = null;
-      let error = null;
-
-      try {
-        // Execute dynamic code snippet inside the Worker's V8 Isolate runtime environment
-        const fn = new Function("env", "storage", "request", code);
-        const dummySecrets = this.ctx.storage.sql.exec(`SELECT key_name, secret_value FROM env_secrets`).toArray();
-        const secretsMap = Object.fromEntries(dummySecrets.map((s: any) => [s.key_name, s.secret_value]));
-
-        result = await fn(secretsMap, this.ctx.storage, c.req.raw);
-      } catch (err: any) {
-        error = err.message || String(err);
-      }
-
-      const executionMs = Number((performance.now() - startTime).toFixed(3));
-
-      return c.json({
-        success: !error,
-        codeExecuted: code,
-        executionTimeMs: executionMs,
-        isolateType: "Cloudflare Worker V8 Isolate",
-        output: result,
-        error: error
-      });
-    });
-
-    // INVOICE SETTLEMENT ENDPOINTS
-    this.app.post("/api/invoices/settle", async (c) => {
-      const body = await c.req.json();
-      const invoiceId = body.invoice_id;
-      const paymentHash = body.payment_hash || 'hash_' + Math.random().toString(36).substring(2, 10);
-      const preimage = 'preimage_' + Math.random().toString(36).substring(2, 12);
-
-      this.ctx.storage.sql.exec(`
-        UPDATE invoices 
-        SET status = 'paid', preimage = ?
-        WHERE id = ? OR payment_hash = ?
-      `, preimage, invoiceId, paymentHash);
-
-      return c.json({
-        success: true,
-        status: "paid",
-        invoice_id: invoiceId,
-        payment_hash: paymentHash,
-        preimage,
-        auth_header: `L402 macaroon_proof_jwt_x402:${preimage}`
-      });
-    });
-
-    // GATEWAY PROXY ENGINE (HTTP 402 INTERCEPTOR)
-    this.app.all("*", async (c) => {
-      const startTime = Date.now();
-      const rawUrl = new URL(c.req.url);
-      
-      // Normalize path
-      let path = rawUrl.pathname.replace(/^\/space\/[^\/]+\/preview\/[^\/]+/, "") || "/";
-
-      const method = c.req.method;
-      const lang = getClientLang(c);
-
-      // Skip internal dashboard API routes
-      if (path.startsWith("/api/")) {
-        return c.notFound();
-      }
-
-      // Find matching gateway route
-      const allRoutes = this.ctx.storage.sql.exec(`
-        SELECT * FROM routes WHERE is_active = 1
-      `).toArray();
-
-      const matchedRoute = allRoutes.find((r: Record<string, unknown>) => {
-        const pattern = r.path_pattern as string;
-        if (pattern === path) return true;
-        if (pattern.endsWith("/*") && path.startsWith(pattern.slice(0, -2))) return true;
-        return false;
-      });
-
-      if (!matchedRoute) {
-        c.header("Content-Language", lang);
-        return c.json({
-          error: t(lang, "route_not_found"),
-          path,
-          hint: t(lang, "route_not_found_hint")
-        }, 404);
-      }
-
-      const priceUsd = matchedRoute.price_usd as number;
-      const routeName = matchedRoute.name as string;
-      const clientIp = c.req.header("cf-connecting-ip") || "127.0.0.1";
-
-      // Check API Key Authorization
-      const authHeader = c.req.header("Authorization") || "";
-      const apiKeyHeader = c.req.header("X-API-Key") || "";
-      let apiKeyStr = "";
-
-      if (apiKeyHeader) {
-        apiKeyStr = apiKeyHeader;
-      } else if (authHeader.startsWith("Bearer x402_")) {
-        apiKeyStr = authHeader.replace("Bearer ", "").trim();
-      }
-
-      let reqBodyPreview = "";
-      try {
-        if (method === "POST" || method === "PUT") {
-          const clonedReq = c.req.raw.clone();
-          reqBodyPreview = (await clonedReq.text()).slice(0, 300);
-        }
-      } catch {
-        reqBodyPreview = "";
-      }
-
-      // Option A: API Key Auth
-      if (apiKeyStr) {
-        const keyRecord = this.ctx.storage.sql.exec(`
-          SELECT * FROM api_keys WHERE key_secret = ? AND status = 'active'
-        `, apiKeyStr).toArray()[0];
-
-        if (!keyRecord) {
-          const latency = Date.now() - startTime;
-          this.logRequest(path, routeName, 401, method, "api_key_invalid", 0, latency, clientIp, reqBodyPreview, "Invalid API key");
-          c.header("Content-Language", lang);
-          return c.json({ error: t(lang, "unauthorized"), message: t(lang, "invalid_api_key") }, 401);
-        }
-
-        const balance = keyRecord.balance_usd as number;
-        if (balance < priceUsd) {
-          const latency = Date.now() - startTime;
-          this.logRequest(path, routeName, 402, method, "api_key_insufficient_funds", 0, latency, clientIp, reqBodyPreview, `Insufficient balance`);
-          
-          return this.respond402(c, matchedRoute, lang, t(lang, "insufficient_balance", { balance: `$${balance.toFixed(4)}`, price: `$${priceUsd.toFixed(4)}` }));
-        }
-
-        // Deduct price from API Key balance
-        this.ctx.storage.sql.exec(`
-          UPDATE api_keys 
-          SET balance_usd = balance_usd - ?, total_spent = total_spent + ?
-          WHERE id = ?
-        `, priceUsd, priceUsd, keyRecord.id);
-
-        this.ctx.storage.sql.exec(`
-          INSERT INTO ledger_tx (id, api_key_id, type, amount_usd, description, ref_id, created_at)
-          VALUES (?, ?, 'charge', ?, ?, ?, ?)
-        `, 'tx_' + Date.now(), keyRecord.id, priceUsd, `Gateway request to ${routeName} (${path})`, matchedRoute.id, Date.now());
-
-        // Process request
-        const { result, status } = await this.executeGatewayTarget(matchedRoute, c, reqBodyPreview, lang);
-        const latency = Date.now() - startTime;
-        const resPreview = JSON.stringify(result).slice(0, 300);
-
-        this.logRequest(path, routeName, status, method, "api_key", priceUsd, latency, clientIp, reqBodyPreview, resPreview);
-
-        c.header("Content-Language", lang);
-        c.header("X-402-Status", "SETTLED");
-        c.header("X-402-Price-Charged", `$${priceUsd.toFixed(4)}`);
-        c.header("X-402-Key-Balance-Remaining", `$${(balance - priceUsd).toFixed(4)}`);
-        return c.json(result, status as 200);
-      }
-
-      // Option B: L402 / Macaroon Preimage Auth
-      const l402Match = authHeader.match(/^L402\s+([^:]+):(.+)$/i) || c.req.header("X-402-Preimage");
-      if (l402Match) {
-        const preimage = typeof l402Match === 'string' ? l402Match : l402Match[2];
-        const invoice = this.ctx.storage.sql.exec(`
-          SELECT * FROM invoices WHERE preimage = ? AND status = 'paid'
-        `, preimage).toArray()[0];
-
-        if (invoice) {
-          const { result, status } = await this.executeGatewayTarget(matchedRoute, c, reqBodyPreview, lang);
-          const latency = Date.now() - startTime;
-          const resPreview = JSON.stringify(result).slice(0, 300);
-
-          this.logRequest(path, routeName, status, method, "l402_macaroon", priceUsd, latency, clientIp, reqBodyPreview, resPreview);
-
-          c.header("Content-Language", lang);
-          c.header("X-402-Status", "SETTLED_L402");
-          c.header("X-402-Preimage-Verified", preimage.slice(0, 10) + "...");
-          return c.json(result, status as 200);
-        }
-      }
-
-      // Option C: Sandbox Instant Micropayment Test Key
-      const sandboxHeader = c.req.header("X-402-Sandbox-Key") || c.req.header("X-402-Test-Payment");
-      if (sandboxHeader === "sandbox_demo" || sandboxHeader === "true") {
-        const { result, status } = await this.executeGatewayTarget(matchedRoute, c, reqBodyPreview, lang);
-        const latency = Date.now() - startTime;
-        const resPreview = JSON.stringify(result).slice(0, 300);
-
-        this.logRequest(path, routeName, status, method, "sandbox_micropayment", priceUsd, latency, clientIp, reqBodyPreview, resPreview);
-
-        c.header("Content-Language", lang);
-        c.header("X-402-Status", "SETTLED_SANDBOX");
-        c.header("X-402-Price-Charged", `$${priceUsd.toFixed(4)}`);
-        return c.json(result, status as 200);
-      }
-
-      // Option D: Missing Payment -> Return HTTP 402 Payment Required!
-      const latency = Date.now() - startTime;
-      this.logRequest(path, routeName, 402, method, "none_blocked", 0, latency, clientIp, reqBodyPreview, "HTTP 402 Payment Required returned to client");
-
-      return this.respond402(c, matchedRoute, lang, t(lang, "payment_required", { price: priceUsd.toFixed(4) }));
-    });
+      },
+      402
+    );
   }
 
-  private respond402(c: any, route: Record<string, unknown>, lang: string, message: string) {
-    const routeId = route.id as string;
-    const priceUsd = route.price_usd as number;
-    const invId = 'inv_' + Math.random().toString(36).substring(2, 10);
-    const payHash = 'hash_' + Math.random().toString(36).substring(2, 12);
-    const macaroon = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.x402.${invId}.${Date.now()}`;
-    const expiresAt = Date.now() + 300000;
+  // Deduct usage budget
+  const estimatedIn = Math.max(10, Math.ceil(JSON.stringify(body).length / 4));
+  const estimatedOut = 500;
+  const budgetCheck = deductGrantBudget(grantClaims.jti, estimatedIn, estimatedOut, grantClaims.budget_in, grantClaims.budget_out);
 
-    this.ctx.storage.sql.exec(`
-      INSERT INTO invoices (id, route_id, price_usd, asset, payment_hash, macaroon, status, expires_at, created_at)
-      VALUES (?, ?, ?, 'USDC', ?, ?, 'pending', ?, ?)
-    `, invId, routeId, priceUsd, payHash, macaroon, expiresAt, Date.now());
+  if (!budgetCheck.allowed) {
+    return c.json(
+      {
+        error: 'Grant token budget exceeded',
+        reason: budgetCheck.reason,
+        remaining_in: budgetCheck.remainingIn,
+        remaining_out: budgetCheck.remainingOut
+      },
+      413
+    );
+  }
 
-    c.status(402);
-    c.header("Content-Language", lang);
-    c.header("WWW-Authenticate", `L402 macaroon="${macaroon}", invoice="lnbc${Math.round(priceUsd * 2000)}u1p..."`);
-    c.header("X-402-Price", priceUsd.toFixed(4));
-    c.header("X-402-Currency", "USD / USDC");
-    c.header("X-402-Challenge-Id", invId);
-    c.header("X-402-Payment-Hash", payHash);
+  // Attach Required Output Headers
+  c.header('X-AIFoundry-Sku', grantClaims.sku || 'T10K');
+  c.header('X-AIFoundry-Tool', toolName);
+  c.header('X-AIFoundry-Budget-In', String(grantClaims.budget_in));
+  c.header('X-AIFoundry-Budget-Out', String(grantClaims.budget_out));
+  c.header('X-AIFoundry-Expires', String(grantClaims.exp));
+  c.header('X-AIFoundry-Jti', grantClaims.jti);
+  c.header('X-AIFoundry-Budget-Remaining', String(budgetCheck.remainingOut));
 
+  // Route Execution
+  if (toolName === 'openspec.plan') {
+    const res = await handleOpenSpecPlan(c.env, body);
+    return c.json(res);
+  }
+
+  if (toolName === 'nemotron.chat') {
+    const res = await runNemotron(c.env, body, 'chat');
     return c.json({
-      error: "Payment Required",
-      status: 402,
-      message,
-      x402: {
-        version: "1.0",
-        language: lang,
-        price_usd: priceUsd,
-        currency: "USDC / Base / Solana / L402 Lightning",
-        challenge_id: invId,
-        payment_hash: payHash,
-        macaroon,
-        expires_at: new Date(expiresAt).toISOString(),
-        payment_options: {
-          usdc_base: {
-            network: "Base Mainnet / Sepolia",
-            vault_address: "0x402A8b0e513aFE6522c07E59b20e06000000402",
-            amount_usdc: priceUsd.toFixed(4)
-          },
-          solana_usdc: {
-            network: "Solana",
-            vault_address: "X402GatewayVaultSolana111111111111111111111",
-            amount_usdc: priceUsd.toFixed(4)
-          },
-          lightning_l402: {
-            bolt11: `lnbc${Math.round(priceUsd * 2000)}u1p3x402gateway...`,
-            sats: Math.ceil(priceUsd * 2000)
-          },
-          api_key_header: "X-API-Key: x402_live_..."
-        },
-        sandbox_test_hint: t(lang, "sandbox_hint")
-      }
+      ok: true,
+      tool: 'nemotron.chat',
+      prompt: body.prompt || body.goal || 'ping',
+      result: res.result,
+      usage: res.usage,
+      model: res.model,
+      provider: res.provider
     });
   }
 
-  private async executeGatewayTarget(route: Record<string, unknown>, c: any, reqBodyStr: string, lang: string) {
-    const routeType = route.type as string;
-
-    // 1. Built-in AI Proxy Endpoint (Text Completion + Image Generation)
-    if (routeType === "builtin_ai") {
-      let parsed: any = {};
-      try { parsed = JSON.parse(reqBodyStr || "{}"); } catch {}
-
-      const prompt = (parsed.prompt || parsed.messages?.[0]?.content || "Explain quantum computing in 2 sentences.").trim();
-      const model = parsed.model || "@cf/meta/llama-3-8b-instruct";
-      const isImageGen = parsed.type === "image" || 
-                         parsed.mode === "image" || 
-                         /^(image|draw|picture|logo|icon|generate image)/i.test(prompt) ||
-                         /image of|picture of|draw a/i.test(prompt);
-
-      if (isImageGen) {
-        const cleanPrompt = prompt.replace(/^(image:|draw:|generate image:?)/i, "").trim() || "Futuristic Cyberpunk x402 Gateway";
-        const svgImage = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-          <defs>
-            <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#0f172a"/>
-              <stop offset="50%" stop-color="#1e1b4b"/>
-              <stop offset="100%" stop-color="#311042"/>
-            </linearGradient>
-            <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="50%" stop-color="#10b981"/>
-              <stop offset="100%" stop-color="#f59e0b"/>
-            </linearGradient>
-            <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#6366f1" flood-opacity="0.4"/>
-            </filter>
-          </defs>
-          <rect width="512" height="512" rx="32" fill="url(#bg)"/>
-          <circle cx="256" cy="220" r="110" fill="none" stroke="url(#glow)" stroke-width="6" filter="url(#shadow)"/>
-          <path d="M210 180 L256 130 L302 180 M256 135 L256 310" stroke="#10b981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-          <rect x="190" y="270" width="132" height="44" rx="10" fill="#111827" stroke="#6366f1" stroke-width="2"/>
-          <text x="256" y="297" fill="#f3f4f6" font-family="system-ui, sans-serif" font-weight="800" font-size="16" text-anchor="middle">x402 PAID</text>
-          <text x="256" y="380" fill="#f8fafc" font-family="system-ui, sans-serif" font-weight="700" font-size="20" text-anchor="middle">${cleanPrompt.slice(0, 32)}</text>
-          <text x="256" y="415" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">Generated via Cloudflare x402 AI Engine</text>
-          <text x="256" y="465" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">VERIFIED • $0.0015 USD SETTLED</text>
-        </svg>`;
-
-        return {
-          status: 200,
-          result: {
-            id: "img-x402-" + Math.random().toString(36).substring(2, 9),
-            type: "image_generation",
-            created: Math.floor(Date.now() / 1000),
-            prompt: cleanPrompt,
-            model: "x402-flux-vector-ai-v1",
-            image_format: "svg_vector",
-            data_url: `data:image/svg+xml;utf8,${encodeURIComponent(svgImage)}`,
-            svg_payload: svgImage,
-            resolution: "512x512",
-            x402_billing: {
-              price_usd: 0.0015,
-              status: t(lang, "settled_status"),
-              proof: "Cryptographic micro-payment verified"
-            }
-          }
-        };
-      }
-
-      // Check for OpenAI API Key in env_secrets for real fallback if present
-      const secrets = this.ctx.storage.sql.exec(`SELECT secret_value FROM env_secrets WHERE key_name = 'OPENAI_API_KEY'`).toArray();
-      const openAiKey = secrets[0]?.secret_value;
-      
-      let aiContent = "";
-      if (openAiKey && openAiKey.startsWith("sk-") && !openAiKey.includes("demo")) {
-        try {
-          const openAiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${openAiKey}`
-            },
-            body: JSON.stringify({
-              model: "gpt-3.5-turbo",
-              messages: [{ role: "user", content: prompt }],
-              max_tokens: 150
-            })
-          });
-          if (openAiRes.ok) {
-            const data: any = await openAiRes.json();
-            aiContent = data.choices?.[0]?.message?.content || "";
-          }
-        } catch {}
-      }
-
-      if (!aiContent) {
-        aiContent = `[x402 AI LLM Output (${lang.toUpperCase()})]\n\n${t(lang, "ai_prompt_received")}: "${prompt}"\n\nQuantum computing leverages principles of quantum mechanics like superposition and entanglement to solve complex mathematical problems exponentially faster than classical computers. The x402 gateway monetizes this response seamlessly per request!`;
-      }
-
-      return {
-        status: 200,
-        result: {
-          id: "chatcmpl-x402-" + Math.random().toString(36).substring(2, 9),
-          object: "chat.completion",
-          created: Math.floor(Date.now() / 1000),
-          model,
-          language: lang,
-          choices: [
-            {
-              index: 0,
-              message: {
-                role: "assistant",
-                content: aiContent
-              },
-              finish_reason: "stop"
-            }
-          ],
-          usage: {
-            prompt_tokens: Math.floor(prompt.length / 4) + 12,
-            completion_tokens: Math.floor(aiContent.length / 4) + 10,
-            total_tokens: Math.floor((prompt.length + aiContent.length) / 4) + 22
-          },
-          x402_billing: {
-            rate: "$0.0015 / request",
-            status: t(lang, "settled_status")
-          }
-        }
-      };
-    }
-
-    // 2. Built-in Web Scraper & Markdown Extractor
-    if (routeType === "builtin_scraper") {
-      let targetScrapeUrl = c.req.query("url");
-      if (!targetScrapeUrl) {
-        try {
-          const body = JSON.parse(reqBodyStr || "{}");
-          targetScrapeUrl = body.url;
-        } catch {}
-      }
-
-      if (!targetScrapeUrl) {
-        targetScrapeUrl = "https://x402.org";
-      }
-
-      if (!/^https?:\/\//i.test(targetScrapeUrl)) {
-        targetScrapeUrl = "https://" + targetScrapeUrl;
-      }
-
-      let fetchedTitle = "Scraped Page: " + targetScrapeUrl;
-      let markdownOutput = "";
-      let wordCount = 0;
-      let linksExtracted: string[] = [];
-
-      try {
-        const res = await fetch(targetScrapeUrl, {
-          headers: { 
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) x402-Gateway-Reader/2.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml"
-          }
-        });
-        
-        if (res.ok) {
-          const html = await res.text();
-          const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
-          if (titleMatch && titleMatch[1]) fetchedTitle = titleMatch[1].trim();
-
-          // Extract meta description
-          const metaDescMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
-          const metaDesc = metaDescMatch ? metaDescMatch[1] : "";
-
-          // Extract anchor links
-          const hrefMatches = [...html.matchAll(/href=["'](https?:\/\/[^"']+)["']/gi)];
-          linksExtracted = Array.from(new Set(hrefMatches.map(m => m[1]))).slice(0, 10);
-
-          // Strip scripts, styles, tags
-          const cleanText = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
-                                .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
-                                .replace(/<[^>]+>/g, " ")
-                                .replace(/\s+/g, " ")
-                                .trim();
-
-          wordCount = cleanText ? cleanText.split(/\s+/).length : 0;
-          
-          markdownOutput = `# ${fetchedTitle}\n\n**Source URL**: ${targetScrapeUrl}\n**Extracted**: ${new Date().toISOString()}\n**Word Count**: ${wordCount} words\n${metaDesc ? `**Description**: ${metaDesc}\n` : ''}\n---\n\n## Page Content Snapshot\n\n${cleanText.slice(0, 1500)}${cleanText.length > 1500 ? '...\n\n*(Truncated for token optimization)*' : ''}\n\n## Extracted Outbound Links (${linksExtracted.length})\n${linksExtracted.map(l => `- [${l}](${l})`).join('\n') || '- None found'}`;
-        } else {
-          markdownOutput = `# Scraped Content from ${targetScrapeUrl}\n\n**HTTP Status**: ${res.status} ${res.statusText}\n\nThis page contains developer specifications and HTTP 402 payment protocol header documentation.\n\n- Standard: HTTP 402 Payment Required\n- Authorizations: L402, Web3 USDC, Macaroons\n- Status: 200 OK after micro-settlement.`;
-          wordCount = 45;
-        }
-      } catch (err: any) {
-        fetchedTitle = "x402 Protocol Specification & API Docs";
-        wordCount = 128;
-        markdownOutput = `# ${fetchedTitle}\n\n**Source**: ${targetScrapeUrl}\n**Status**: Fallback Context Generator\n\n## Overview\nThis API gateway implements the standard x402 HTTP Payment protocol. Clients connect, receive an HTTP 402 challenge with lightning or crypto payment headers, settle the challenge, and receive pristine API responses.\n\n*(Live fetch note: ${err.message})*`;
-      }
-
-      return {
-        status: 200,
-        result: {
-          url: targetScrapeUrl,
-          title: fetchedTitle,
-          word_count: wordCount,
-          outbound_links_count: linksExtracted.length,
-          top_links: linksExtracted,
-          markdown: markdownOutput,
-          extracted_at: new Date().toISOString(),
-          x402_receipt: { cost_usd: 0.0020, settled: true, language: lang }
-        }
-      };
-    }
-
-    // 3. Built-in Code Execution Sandbox
-    if (routeType === "builtin_sandbox") {
-      let code = "const arr = [10, 20, 30, 40, 50];\nconst sum = arr.reduce((a, b) => a + b, 0);\nconsole.log('Processed array sum:', sum);\nreturn { sum, average: sum / arr.length, count: arr.length };";
-      let language = "javascript";
-      try {
-        const body = JSON.parse(reqBodyStr || "{}");
-        if (body.code) code = body.code;
-        if (body.language) language = body.language;
-      } catch {}
-
-      const logs: string[] = [];
-      let returnValue: any = null;
-      let execError = null;
-      const startTime = performance.now();
-
-      try {
-        const fn = new Function("console", "Math", "JSON", "Date", code);
-        const mockConsole = {
-          log: (...args: any[]) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(" ")),
-          warn: (...args: any[]) => logs.push("[WARN] " + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(" ")),
-          error: (...args: any[]) => logs.push("[ERROR] " + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(" "))
-        };
-        returnValue = fn(mockConsole, Math, JSON, Date);
-      } catch (e: any) {
-        execError = e.message || String(e);
-      }
-
-      const execDuration = Number((performance.now() - startTime).toFixed(3));
-
-      return {
-        status: 200,
-        result: {
-          language,
-          code_executed: code,
-          logs,
-          return_value: returnValue,
-          error: execError,
-          execution_ms: execDuration,
-          sandbox_isolation: "Cloudflare Workers V8 Isolate",
-          x402_receipt: { cost_usd: 0.0010, status: "PAID", locale: lang }
-        }
-      };
-    }
-
-    // 4. Built-in Devtools QR Generator
-    if (routeType === "builtin_devtools") {
-      let text = "https://x402.org";
-      let darkColor = "#6366f1";
-      let lightColor = "#0f172a";
-      try {
-        const body = JSON.parse(reqBodyStr || "{}");
-        if (body.text) text = body.text;
-        if (body.darkColor) darkColor = body.darkColor;
-        if (body.lightColor) lightColor = body.lightColor;
-      } catch {}
-
-      const textLen = text.length;
-      const hashVal = Array.from(text).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      
-      const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-        <rect width="200" height="200" rx="16" fill="${lightColor}"/>
-        <!-- Finder Pattern Top Left -->
-        <rect x="20" y="20" width="48" height="48" fill="${darkColor}"/>
-        <rect x="26" y="26" width="36" height="36" fill="${lightColor}"/>
-        <rect x="32" y="32" width="24" height="24" fill="${darkColor}"/>
-        <!-- Finder Pattern Top Right -->
-        <rect x="132" y="20" width="48" height="48" fill="${darkColor}"/>
-        <rect x="138" y="26" width="36" height="36" fill="${lightColor}"/>
-        <rect x="144" y="32" width="24" height="24" fill="${darkColor}"/>
-        <!-- Finder Pattern Bottom Left -->
-        <rect x="20" y="132" width="48" height="48" fill="${darkColor}"/>
-        <rect x="26" y="138" width="36" height="36" fill="${lightColor}"/>
-        <rect x="32" y="144" width="24" height="24" fill="${darkColor}"/>
-        <!-- Dynamic Modules -->
-        <rect x="80" y="20" width="12" height="12" fill="#10b981"/>
-        <rect x="100" y="20" width="12" height="12" fill="${darkColor}"/>
-        <rect x="80" y="40" width="12" height="12" fill="${darkColor}"/>
-        <rect x="100" y="56" width="12" height="12" fill="#10b981"/>
-        <rect x="20" y="80" width="12" height="12" fill="${darkColor}"/>
-        <rect x="40" y="96" width="12" height="12" fill="#10b981"/>
-        <rect x="60" y="80" width="12" height="12" fill="${darkColor}"/>
-        <rect x="80" y="80" width="40" height="40" fill="#10b981" rx="6"/>
-        <rect x="132" y="80" width="12" height="12" fill="${darkColor}"/>
-        <rect x="152" y="96" width="12" height="12" fill="${darkColor}"/>
-        <rect x="80" y="132" width="12" height="12" fill="${darkColor}"/>
-        <rect x="100" y="148" width="12" height="12" fill="#10b981"/>
-        <rect x="132" y="132" width="48" height="12" fill="${darkColor}"/>
-        <rect x="144" y="152" width="24" height="24" fill="#10b981" rx="4"/>
-        <text x="100" y="105" fill="#ffffff" font-family="monospace" font-weight="900" font-size="11" text-anchor="middle">x402</text>
-        <text x="100" y="190" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle">Verified QR • ${textLen} chars</text>
-      </svg>`;
-
-      return {
-        status: 200,
-        result: {
-          qr_input: text,
-          input_length: textLen,
-          checksum_hash: hashVal.toString(16),
-          qr_svg: svgData,
-          data_url: `data:image/svg+xml;utf8,${encodeURIComponent(svgData)}`,
-          x402_receipt: { cost_usd: 0.0005, status: "PAID" }
-        }
-      };
-    }
-
-    // 5. Custom Upstream Proxy Target (e.g. CoinGecko or custom URL)
-    const targetUrl = route.target_url as string;
-    if (targetUrl) {
-      try {
-        const fetchRes = await fetch(targetUrl, {
-          method: c.req.method,
-          headers: {
-            "User-Agent": "x402-Gateway-Proxy/2.0",
-            "Accept": "application/json"
-          }
-        });
-
-        let proxyData;
-        try { proxyData = await fetchRes.json(); } catch { proxyData = await fetchRes.text(); }
-
-        return {
-          status: fetchRes.status,
-          result: {
-            upstream_status: fetchRes.status,
-            target_url: targetUrl,
-            data: proxyData,
-            x402_receipt: { cost_usd: route.price_usd, status: "PAID" }
-          }
-        };
-      } catch (err: any) {
-        // Fallback for demo price feeds if upstream fails
-        if (targetUrl.includes("coingecko") || targetUrl.includes("crypto")) {
-          return {
-            status: 200,
-            result: {
-              upstream_status: 200,
-              target_url: targetUrl,
-              data: {
-                bitcoin: { usd: 67420.50, usd_24h_change: 3.42 },
-                ethereum: { usd: 3512.80, usd_24h_change: 2.15 },
-                solana: { usd: 178.40, usd_24h_change: 5.80 },
-                "usd-coin": { usd: 1.00, usd_24h_change: 0.01 }
-              },
-              fallback_notice: "Rate limit fallback price feed active",
-              x402_receipt: { cost_usd: route.price_usd, status: "PAID" }
-            }
-          };
-        }
-
-        return {
-          status: 502,
-          result: {
-            error: "Bad Gateway - Upstream fetch failed",
-            target_url: targetUrl,
-            details: err.message
-          }
-        };
-      }
-    }
-
-    return {
-      status: 200,
-      result: { message: "Proxy executed successfully", route }
-    };
+  if (toolName === 'review.kimi') {
+    const res = await handleReviewKimi(c.env, body);
+    return c.json(res);
   }
 
-  private logRequest(
-    path: string,
-    routeName: string,
-    statusCode: number,
-    method: string,
-    paymentMethod: string,
-    costUsd: number,
-    latencyMs: number,
-    clientIp: string,
-    requestPreview: string,
-    responsePreview: string
-  ) {
-    const logId = 'log_' + Math.random().toString(36).substring(2, 10);
-    this.ctx.storage.sql.exec(`
-      INSERT INTO request_logs (id, timestamp, path, route_name, status_code, method, payment_method, cost_usd, latency_ms, client_ip, request_preview, response_preview)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, logId, Date.now(), path, routeName, statusCode, method, paymentMethod, costUsd, latencyMs, clientIp, requestPreview, responsePreview);
+  if (toolName === 'audit.cf') {
+    const res = await handleAuditCf(c.env, body);
+    return c.json(res);
   }
-}
 
-export default {
-  async fetch(request: Request, env: Record<string, unknown>, ctx: ExecutionContext) {
-    // 1. Check if requesting static assets
-    if (env.ASSETS) {
-      const assetRes = await (env.ASSETS as Fetcher).fetch(request);
-      if (assetRes.status < 400) {
-        return assetRes;
-      }
-    }
-
-    // 2. Otherwise delegate to Durable Object
-    const id = env.APP ? (env.APP as DurableObjectNamespace).idFromName("default") : null;
-    if (id) {
-      const stub = (env.APP as DurableObjectNamespace).get(id);
-      return stub.fetch(request);
-    }
-    return new Response("Durable Object 'APP' not bound", { status: 500 });
+  if (toolName === 'design.402') {
+    const res = await handleDesign402(c.env, body);
+    return c.json(res);
   }
-};
+
+  return c.json({ error: `Unknown tool name: ${toolName}` }, 404);
+});
+
+export default app;
