@@ -48,6 +48,45 @@ const CosmicLogo = () => {
   );
 };
 
+const toolDetails = {
+  'openspec.plan': {
+    title: 'OpenSpec Software Architecture Plan',
+    price: '$0.05 USDC',
+    desc: 'Generates production software architecture specs, multi-agent roles, business models, and technical dev plans based on Fission AI OpenSpec format.',
+    provider: 'Fission AI OpenSpec + DeepSeek R1'
+  },
+  'review.kimi': {
+    title: 'Alibaba Open Code Review (Kimi)',
+    price: '$0.05 USDC',
+    desc: 'AST code review engine with token receipt metering, security flaw detection, and COGS margin tracking based on Alibaba Open Code Review.',
+    provider: 'Alibaba Open Code Review'
+  },
+  'audit.cf': {
+    title: 'Cloudflare Workers Security Audit',
+    price: '$0.05 USDC',
+    desc: 'Scans Wrangler configs & Worker code for exposed secrets, insecure bindings, and x402 payment readiness.',
+    provider: 'Cloudflare Security Audit Skill'
+  },
+  'crypto.vault': {
+    title: 'Zero-Knowledge Vault Guard',
+    price: '$0.05 USDC',
+    desc: 'AES-256-GCM hardware isolate encryption & PII scan so AI agents never transport financial/banking metadata in plaintext.',
+    provider: 'WebCrypto Edge Isolate'
+  },
+  'design.402': {
+    title: 'OpenDesign UI Spec Generator',
+    price: '$0.05 USDC',
+    desc: 'Generates tailwind design tokens, atomic component hierarchies, SVG logo specs, and x402 payment modal wireframes.',
+    provider: 'OpenDesign DeepSeek'
+  },
+  'nemotron.chat': {
+    title: 'Workers AI Edge Model Chat',
+    price: '$0.05 USDC',
+    desc: 'Direct sub-20ms edge LLM inference proxy for autonomous AI agents.',
+    provider: 'Cloudflare Workers AI (Nemotron/DeepSeek)'
+  }
+};
+
 export function App() {
   const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'arch', 'roles', 'catalog', 'business', 'sdks'
   const [notification, setNotification] = useState(null);
