@@ -213,8 +213,13 @@ app.get('/health', (c) => {
   });
 });
 
-// GET / — Catalog of Tools and SKUs
-app.get('/', (c) => {
+// GET / — Catalog of Tools and SKUs (or HTML UI if browser)
+app.get('/', async (c) => {
+  const accept = c.req.header('accept') || '';
+  if (accept.includes('text/html') && c.env.ASSETS) {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+
   const host = c.req.header('host') || 'api.aifoundry.sh';
   return c.json({
     name: 'AIFoundry.sh x402 Monetized Edge Gateway',
@@ -246,7 +251,7 @@ app.get('/', (c) => {
         sku: 'T10K',
         price_usd: 0.05,
         status: 'production',
-        description: 'Generates structured OpenSpec architectural proposals via Nemotron AI.'
+        description: 'Generates structured OpenSpec architectural proposals via DeepSeek / Nemotron AI.'
       },
       {
         name: 'nemotron.chat',
@@ -255,7 +260,7 @@ app.get('/', (c) => {
         sku: 'T10K',
         price_usd: 0.05,
         status: 'production',
-        description: 'Direct completion interface to NVIDIA Nemotron 3 120B / DeepSeek.'
+        description: 'Direct completion interface to DeepSeek R1 / NVIDIA Nemotron.'
       },
       {
         name: 'review.kimi',
@@ -287,6 +292,13 @@ app.get('/', (c) => {
     ],
     documentation: `https://${host}/app`
   });
+});
+
+app.get('/app', async (c) => {
+  if (c.env.ASSETS) {
+    return c.env.ASSETS.fetch(new Request(new URL('/', c.req.url), c.req.raw));
+  }
+  return c.text('AIFoundry.sh Developer Portal');
 });
 
 // GET /.well-known/x402 — Standard Payment Discovery
