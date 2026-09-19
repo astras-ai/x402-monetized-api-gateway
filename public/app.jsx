@@ -231,22 +231,22 @@ export function App() {
 
   const refreshData = async () => {
     try {
-      const statsRes = await fetch('/api/stats');
+      const statsRes = await fetch('api/stats');
       if (statsRes.ok) setStats(await statsRes.json());
 
-      const metricsRes = await fetch('/api/agent-metrics');
+      const metricsRes = await fetch('api/agent-metrics');
       if (metricsRes.ok) setAgentMetrics(await metricsRes.json());
 
-      const keysRes = await fetch('/api/keys');
+      const keysRes = await fetch('api/keys');
       if (keysRes.ok) {
         const data = await keysRes.json();
         if (data.keys) setApiKeysList(data.keys);
       }
 
-      const logsRes = await fetch('/api/logs');
+      const logsRes = await fetch('api/logs');
       if (logsRes.ok) setLogsList(await logsRes.json());
 
-      const secretsRes = await fetch('/api/secrets');
+      const secretsRes = await fetch('api/secrets');
       if (secretsRes.ok) setSecretsList(await secretsRes.json());
     } catch (e) {
       console.warn('Failed to refresh data from edge:', e);
