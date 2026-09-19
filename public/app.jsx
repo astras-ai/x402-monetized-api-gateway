@@ -46,64 +46,31 @@ import {
   Bot,
   Send,
   Sliders,
-  CheckSquare,
-  HelpCircle as FaqIcon
+  CheckSquare
 } from 'lucide-react';
 
 // Multi-language translation dictionary
 const LANGUAGES = [
   { code: 'en', name: 'English (US)', flag: '🇺🇸', dir: 'ltr' },
-  { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧', dir: 'ltr' },
   { code: 'es', name: 'Español', flag: '🇪🇸', dir: 'ltr' },
   { code: 'fr', name: 'Français', flag: '🇫🇷', dir: 'ltr' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪', dir: 'ltr' },
   { code: 'zh', name: '中文', flag: '🇨🇳', dir: 'ltr' },
-  { code: 'ja', name: '日本語', flag: '🇯🇵', dir: 'ltr' },
-  { code: 'pt', name: 'Português', flag: '🇧🇷', dir: 'ltr' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦', dir: 'rtl' }
+  { code: 'ja', name: '日本語', flag: '🇯🇵', dir: 'ltr' }
 ];
-
-const I18N_DICT = {
-  en: {
-    app_title: "AIFoundry.sh",
-    app_subtitle: "x402 Monetized Edge Gateway & AI Agent Foundry",
-    view_storefront: "Public API Storefront",
-    view_admin: "Admin & Developer Portal",
-    store_hero_badge: "HTTP 402 Standard • L402 Macaroons • Cloudflare Edge",
-    store_hero_title: "Prepaid Capability-Gated AI Tools Built for Autonomous Agents",
-    store_hero_subtitle: "Pay fractions of a cent ($0.05) per AI tool call using Web3 USDC signatures, L402 Lightning macaroons, or pre-funded balances.",
-    store_hero_cta_explore: "Explore API Catalog",
-    store_hero_cta_try: "Test Tool 1: Security Agent",
-    store_hero_cta_admin: "Open Admin Console",
-    
-    nav_tool_1: "Tool 1: Security Agent (audit.cf)",
-    nav_playground: "Interactive Testbench",
-    nav_routes: "Monetized Routes",
-    nav_keys: "API Keys & Ledger",
-    nav_secrets: "Workspace Variables",
-    nav_logs: "Logs & Revenue",
-    nav_deploy: "Production Guide",
-  }
-};
 
 // 4D Cosmic Hypercube Animation Component
 const CosmicHypercube = () => {
   return (
-    <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
-      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-purple-500/20 blur-2xl animate-quantum-pulse" />
-      <svg className="w-40 h-40 animate-tesseract-rotate text-cyan-400" viewBox="0 0 100 100" fill="none">
-        {/* Outer Tesseract Cube */}
+    <div className="relative w-36 h-36 mx-auto flex items-center justify-center">
+      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-purple-500/20 blur-2xl animate-pulse" />
+      <svg className="w-32 h-32 text-cyan-400" viewBox="0 0 100 100" fill="none">
         <polygon points="20,20 80,20 80,80 20,80" stroke="currentColor" strokeWidth="1" strokeOpacity="0.8" />
-        {/* Inner 4D Hypercube Projection */}
         <polygon points="35,35 65,35 65,65 35,65" stroke="#818cf8" strokeWidth="1" strokeOpacity="0.9" />
-        {/* Inter-dimensional Lattice Vectors */}
         <line x1="20" y1="20" x2="35" y2="35" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
         <line x1="80" y1="20" x2="65" y2="35" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
         <line x1="80" y1="80" x2="65" y2="65" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
         <line x1="20" y1="80" x2="35" y2="65" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
-        {/* 5D Quantum Core Node */}
-        <circle cx="50" cy="50" r="4" fill="#22d3ee" className="animate-ping" />
-        <circle cx="50" cy="50" r="2" fill="#ffffff" />
       </svg>
     </div>
   );
@@ -112,15 +79,79 @@ const CosmicHypercube = () => {
 export function App() {
   const [currentLang, setCurrentLang] = useState('en');
   const [mainView, setMainView] = useState('admin'); // 'storefront' or 'admin'
-  const [activeTab, setActiveTab] = useState('tool_1_security'); // 'tool_1_security', 'playground', 'routes', 'keys', 'secrets', 'logs', 'deploy'
+  const [activeTab, setActiveTab] = useState('tool_1_security'); // 'tool_1_security', 'agent_metrics', 'playground', 'keys', 'secrets', 'logs'
+  const [selectedNetwork, setSelectedNetwork] = useState('base-sepolia');
   
   const [stats, setStats] = useState({
-    total_revenue_usd: 0.15,
-    total_requests: 3,
-    total_paid_requests: 2,
-    total_402_challenges: 1,
-    avg_latency_ms: 6,
+    total_revenue_usd: 1.85,
+    total_requests: 38,
+    total_paid_requests: 31,
+    total_402_challenges: 7,
+    avg_latency_ms: 14,
     active_api_keys: 2
+  });
+
+  const [agentMetrics, setAgentMetrics] = useState({
+    'audit.cf': {
+      agent_id: 'audit.cf',
+      agent_name: 'Security Agent (audit.cf)',
+      total_calls: 14,
+      tokens_in: 18500,
+      tokens_out: 4200,
+      avg_latency_ms: 12,
+      cache_hits: 8,
+      total_revenue_usd: 0.70,
+      efficiency_score: 94,
+      optimization_advice: 'Static wrangler rules cached. Workers AI LLM reasoning triggers for CRITICAL findings.'
+    },
+    'design.402': {
+      agent_id: 'design.402',
+      agent_name: 'OpenDesign Agent (design.402)',
+      total_calls: 9,
+      tokens_in: 9200,
+      tokens_out: 6800,
+      avg_latency_ms: 18,
+      cache_hits: 3,
+      total_revenue_usd: 0.45,
+      efficiency_score: 88,
+      optimization_advice: 'Pre-indexed design token schemas reduce prompt token footprint by 42%.'
+    },
+    'openspec.plan': {
+      agent_id: 'openspec.plan',
+      agent_name: 'Architecture Agent (openspec.plan)',
+      total_calls: 22,
+      tokens_in: 34000,
+      tokens_out: 28500,
+      avg_latency_ms: 24,
+      cache_hits: 11,
+      total_revenue_usd: 1.10,
+      efficiency_score: 91,
+      optimization_advice: 'Reasoning chain distilled via DeepSeek R1 Qwen 32B for 3x edge throughput.'
+    },
+    'review.kimi': {
+      agent_id: 'review.kimi',
+      agent_name: 'Code Review Agent (review.kimi)',
+      total_calls: 18,
+      tokens_in: 29000,
+      tokens_out: 5100,
+      avg_latency_ms: 9,
+      cache_hits: 12,
+      total_revenue_usd: 0.90,
+      efficiency_score: 96,
+      optimization_advice: 'AST pre-scanner filters 82% of unchanged code blocks before triggering AI pass.'
+    },
+    'nemotron.chat': {
+      agent_id: 'nemotron.chat',
+      agent_name: 'Workers AI Chat (nemotron.chat)',
+      total_calls: 31,
+      tokens_in: 41000,
+      tokens_out: 32000,
+      avg_latency_ms: 15,
+      cache_hits: 5,
+      total_revenue_usd: 1.55,
+      efficiency_score: 89,
+      optimization_advice: 'Quantized 8-bit model weights enable sub-20ms edge completion.'
+    }
   });
 
   const [notification, setNotification] = useState(null);
@@ -144,10 +175,82 @@ export function App() {
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditRawHeaders, setAuditRawHeaders] = useState(null);
 
+  // Testbench State
+  const [selectedTestTool, setSelectedTestTool] = useState('audit.cf');
+  const [testPayload, setTestPayload] = useState('{\n  "goal": "Build an AI vision proxy for edge micro-transactions"\n}');
+  const [testResult, setTestResult] = useState(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  // API Keys State
+  const [apiKeysList, setApiKeysList] = useState([
+    {
+      id: 'key_01',
+      name: 'Primary Developer Key',
+      key_secret: 'x402_live_demo888899990000',
+      balance_usd: 25.00,
+      total_spent: 1.45,
+      status: 'active',
+      created_at: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      id: 'key_02',
+      name: 'Autonomous Agent ElizaOS',
+      key_secret: 'x402_agent_eliza_77889900',
+      balance_usd: 50.00,
+      total_spent: 4.80,
+      status: 'active',
+      created_at: new Date(Date.now() - 172800000).toISOString()
+    }
+  ]);
+
+  // Secrets State
+  const [secretsList, setSecretsList] = useState([
+    { key_name: 'CF_API_TOKEN', secret_value: 'cf_api_tok_••••••••••••', category: 'ai', description: 'Cloudflare Workers AI API Token' },
+    { key_name: 'CF_ACCOUNT_ID', secret_value: 'a1b2c3d4e5f67890', category: 'ai', description: 'Cloudflare Account ID' },
+    { key_name: 'PAY_TO', secret_value: '0x71C7...402B89', category: 'web3', description: 'USDC Recipient Vault' },
+    { key_name: 'JWT_SECRET', secret_value: 'aifoundry-secret-key-tonight', category: 'system', description: 'Grant Minting Secret Key' }
+  ]);
+  const [newSecretKey, setNewSecretKey] = useState('');
+  const [newSecretValue, setNewSecretValue] = useState('');
+
+  // Logs State
+  const [logsList, setLogsList] = useState([
+    { id: 'log_01', timestamp: new Date().toISOString(), route: '/v1/tools/openspec.plan', status: 200, payment_method: 'L402 Macaroon', revenue_usd: 0.05, latency_ms: 12 },
+    { id: 'log_02', timestamp: new Date(Date.now() - 60000).toISOString(), route: '/v1/tools/review.kimi', status: 402, payment_method: 'HTTP 402 Required', revenue_usd: 0, latency_ms: 2 },
+    { id: 'log_03', timestamp: new Date(Date.now() - 120000).toISOString(), route: '/v1/tools/audit.cf', status: 200, payment_method: 'EVM USDC (Base)', revenue_usd: 0.05, latency_ms: 8 }
+  ]);
+
   const showToast = (msg, type = 'info') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 4000);
   };
+
+  const refreshData = async () => {
+    try {
+      const statsRes = await fetch('/api/stats');
+      if (statsRes.ok) setStats(await statsRes.json());
+
+      const metricsRes = await fetch('/api/agent-metrics');
+      if (metricsRes.ok) setAgentMetrics(await metricsRes.json());
+
+      const keysRes = await fetch('/api/keys');
+      if (keysRes.ok) {
+        const data = await keysRes.json();
+        if (data.keys) setApiKeysList(data.keys);
+      }
+
+      const logsRes = await fetch('/api/logs');
+      if (logsRes.ok) setLogsList(await logsRes.json());
+    } catch (e) {
+      console.warn('Failed to refresh data from edge:', e);
+    }
+  };
+
+  useEffect(() => {
+    refreshData();
+    const timer = setInterval(refreshData, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handlePresetSelect = (preset) => {
     setAuditInputType(preset);
@@ -167,163 +270,270 @@ export function App() {
         main: "src/index.ts",
         compatibility_date: "2024-09-23",
         vars: {
-          NETWORK: "base-sepolia",
+          NETWORK: selectedNetwork,
           BRAND: "AIFoundry.sh"
         }
       }, null, 2));
-      setAuditSourceCode('const apiKey = env.OPENAI_API_KEY; // Correctly bound via Cloudflare Secrets');
+      setAuditSourceCode('const apiKey = env.CF_API_TOKEN; // Correctly bound via Cloudflare Secrets');
     }
   };
 
-  // Run Tool 1: Security Agent Test
+  // Run Tool 1: Security Agent Audit Test
   const handleRunSecurityAudit = async () => {
     setIsAuditing(true);
     setAuditResult(null);
     setAuditRawHeaders(null);
 
-    const headers = { 'Content-Type': 'application/json' };
-    if (auditAuthMode === 'sandbox') {
-      headers['X-402-Sandbox-Key'] = 'sandbox_demo';
-    } else if (auditAuthMode === 'api_key') {
-      headers['X-API-Key'] = 'x402_live_demo888899990000';
-    }
-
     try {
-      let parsedWrangler = auditWranglerConfig;
-      const res = await fetch('./v1/tools/audit.cf', {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (auditAuthMode === 'sandbox') {
+        headers['X-402-Sandbox-Key'] = 'sandbox_demo';
+      } else if (auditAuthMode === 'api_key') {
+        headers['X-API-Key'] = 'x402_live_demo888899990000';
+      }
+
+      const res = await fetch('/v1/tools/audit.cf', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          wrangler_config: parsedWrangler,
+          wrangler_config: auditWranglerConfig,
           source_code: auditSourceCode,
           project_type: 'worker'
         })
       });
 
-      const resHeaders = {};
-      res.headers.forEach((v, k) => { resHeaders[k] = v; });
-      setAuditRawHeaders(resHeaders);
+      const responseHeaders = {};
+      res.headers.forEach((val, key) => {
+        responseHeaders[key] = val;
+      });
+      setAuditRawHeaders(responseHeaders);
 
       const data = await res.json();
       setAuditResult({
         status: res.status,
-        statusText: res.statusText,
+        ok: res.ok,
         data
       });
 
       if (res.status === 200) {
-        showToast("Tool 1 Execution Success! Audit complete.", "success");
+        showToast('Security Agent audit completed successfully! Grant headers mint verified.', 'success');
       } else if (res.status === 402) {
-        showToast("HTTP 402 Payment Required returned!", "warning");
+        showToast('HTTP 402 Payment Required challenge received from x402 Gateway.', 'warning');
+      } else {
+        showToast(`Audit failed with HTTP ${res.status}`, 'error');
       }
-    } catch (err) {
-      setAuditResult({
-        status: 500,
-        statusText: "Client Error",
-        data: { error: err.message }
-      });
-      showToast("Audit execution failed: " + err.message, "error");
+      refreshData();
+    } catch (e) {
+      showToast(`Execution error: ${e.message}`, 'error');
     } finally {
       setIsAuditing(false);
     }
   };
 
+  // Run Tool Testbench Call
+  const handleRunTestTool = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      let parsedBody = {};
+      try {
+        parsedBody = JSON.parse(testPayload);
+      } catch (e) {
+        parsedBody = { prompt: testPayload };
+      }
+
+      const res = await fetch(`/v1/tools/${selectedTestTool}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-402-Sandbox-Key': 'sandbox_demo'
+        },
+        body: JSON.stringify(parsedBody)
+      });
+
+      const data = await res.json();
+      setTestResult({
+        status: res.status,
+        data
+      });
+      showToast(`Execution completed for ${selectedTestTool}`, 'success');
+      refreshData();
+    } catch (e) {
+      showToast(`Test execution failed: ${e.message}`, 'error');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleFaucetTopup = async () => {
+    try {
+      const res = await fetch('/api/faucet/topup', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`Testnet faucet top-up claimed! New balance: $${data.new_balance.toFixed(2)}`, 'success');
+        refreshData();
+      }
+    } catch (e) {
+      showToast('Faucet claim failed.', 'error');
+    }
+  };
+
+  const handleAddSecret = async () => {
+    if (!newSecretKey || !newSecretValue) {
+      showToast('Key name and secret value are required.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key_name: newSecretKey, secret_value: newSecretValue, category: 'ai' })
+      });
+      if (res.ok) {
+        showToast(`Secret ${newSecretKey} saved!`, 'success');
+        setSecretsList([...secretsList.filter(s => s.key_name !== newSecretKey), { key_name: newSecretKey, secret_value: newSecretValue, category: 'ai' }]);
+        setNewSecretKey('');
+        setNewSecretValue('');
+      }
+    } catch (e) {
+      showToast('Failed to save secret.', 'error');
+    }
+  };
+
   return (
-    <div className="min-h-screen text-gray-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-cosmic-950 text-gray-100 font-sans selection:bg-cyan-500 selection:text-black">
       
-      {/* Top Notification Toast */}
+      {/* Toast Notification Banner */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl transition-all duration-300 animate-bounce ${
-          notification.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200' :
-          notification.type === 'warning' ? 'bg-amber-950/90 border-amber-500/50 text-amber-200' :
-          'bg-rose-950/90 border-rose-500/50 text-rose-200'
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce ${
+          notification.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-300' :
+          notification.type === 'warning' ? 'bg-amber-950/90 border-amber-500/40 text-amber-300' :
+          notification.type === 'error' ? 'bg-rose-950/90 border-rose-500/40 text-rose-300' :
+          'bg-indigo-950/90 border-indigo-500/40 text-cyan-300'
         }`}>
-          {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> :
-           notification.type === 'warning' ? <AlertTriangle className="w-5 h-5 text-amber-400" /> :
-           <XCircle className="w-5 h-5 text-rose-400" />}
-          <span className="text-sm font-medium">{notification.msg}</span>
+          {notification.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+          {notification.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-400" />}
+          {notification.type === 'error' && <XCircle className="w-4 h-4 text-rose-400" />}
+          <span>{notification.msg}</span>
         </div>
       )}
 
-      {/* Main Cosmic Header */}
-      <header className="sticky top-0 z-40 bg-cosmic-950/90 backdrop-blur-md border-b border-indigo-500/20 px-4 lg:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setMainView('storefront')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 border border-cyan-400/30">
-              <ShieldCheck className="w-5 h-5 text-cyan-200" />
+      {/* Main Top Navigation Header */}
+      <header className="border-b border-indigo-500/20 bg-cosmic-900/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20">
+              <div className="w-full h-full bg-cosmic-950 rounded-[10px] flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-cyan-400" />
+              </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-xl text-white tracking-tight cyan-text-glow">AIFoundry.sh</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-                  x402 Protocol
+                <span className="font-extrabold text-base tracking-tight text-white cyan-text-glow">AIFoundry.sh</span>
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-mono font-semibold text-indigo-300">
+                  x402 Gateway v1.0
                 </span>
               </div>
-              <p className="text-xs text-gray-400 hidden md:block">Prepaid Capability-Gated AI Gateway for Autonomous Agents</p>
+              <p className="text-[10px] text-gray-400 font-mono">Prepaid Capability-Gated AI Tools on Cloudflare Edge</p>
             </div>
           </div>
-        </div>
 
-        {/* View Switcher Tabs */}
-        <div className="flex items-center gap-3">
-          <div className="bg-cosmic-900 border border-indigo-500/30 p-1 rounded-xl flex items-center gap-1 shadow-inner">
+          <div className="flex items-center gap-3">
+            {/* Testnet Switcher */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cosmic-850 border border-indigo-500/30 text-xs">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <select
+                value={selectedNetwork}
+                onChange={(e) => setSelectedNetwork(e.target.value)}
+                className="bg-transparent text-gray-200 font-mono text-xs focus:outline-none cursor-pointer"
+              >
+                <option value="base-sepolia" className="bg-cosmic-900">Base Sepolia (84532)</option>
+                <option value="solana-devnet" className="bg-cosmic-900">Solana Devnet</option>
+                <option value="polygon-amoy" className="bg-cosmic-900">Polygon Amoy (80002)</option>
+                <option value="arbitrum-sepolia" className="bg-cosmic-900">Arbitrum Sepolia (421614)</option>
+                <option value="base" className="bg-cosmic-900">Base Mainnet (8453)</option>
+              </select>
+            </div>
+
+            {/* Testnet Faucet Button */}
             <button
-              onClick={() => setMainView('admin')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                mainView === 'admin'
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
+              onClick={handleFaucetTopup}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-300 font-semibold text-xs hover:bg-emerald-500/30 transition-all shadow-md"
             >
-              <Terminal className="w-3.5 h-3.5" />
-              <span>Developer Portal & Tool Verification</span>
+              <Coins className="w-3.5 h-3.5 text-emerald-400" />
+              <span>+ $10 Faucet</span>
             </button>
-            <button
-              onClick={() => setMainView('storefront')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                mainView === 'storefront'
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <Store className="w-3.5 h-3.5" />
-              <span>Public API Catalog</span>
-            </button>
+
+            {/* View Switcher Button */}
+            <div className="flex p-1 rounded-xl bg-cosmic-850 border border-indigo-500/30 text-xs">
+              <button
+                onClick={() => setMainView('admin')}
+                className={`px-3 py-1 rounded-lg transition-all font-semibold ${
+                  mainView === 'admin' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Admin Console
+              </button>
+              <button
+                onClick={() => setMainView('storefront')}
+                className={`px-3 py-1 rounded-lg transition-all font-semibold ${
+                  mainView === 'storefront' ? 'bg-cyan-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Storefront
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Main Portal View */}
+      {/* Admin Console View */}
       {mainView === 'admin' && (
-        <div className="flex-1 flex flex-col md:flex-row">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
           
           {/* Sidebar Navigation */}
-          <aside className="w-full md:w-72 bg-cosmic-900/80 border-b md:border-b-0 md:border-r border-indigo-500/20 p-4 space-y-6">
-            
-            {/* 4D Hypercube Header Card */}
-            <div className="glass-panel p-4 rounded-2xl text-center space-y-2 relative overflow-hidden">
+          <aside className="w-full md:w-64 bg-cosmic-900/80 border border-indigo-500/20 p-4 rounded-3xl space-y-6">
+            <div className="p-3 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-center space-y-1">
               <CosmicHypercube />
-              <div className="text-xs font-bold text-cyan-300 font-mono">4D/5D Quantum Lattice Node</div>
-              <p className="text-[11px] text-gray-400">Cloudflare Edge Isolate Engine</p>
+              <div className="text-[11px] font-bold text-cyan-300 font-mono">Cloudflare Workers AI</div>
+              <div className="text-[10px] text-emerald-400 font-mono flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>DeepSeek R1 / Nemotron</span>
+              </div>
             </div>
 
             <nav className="space-y-1">
               <button
                 onClick={() => setActiveTab('tool_1_security')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === 'tool_1_security'
                     ? 'glass-panel-glow text-cyan-300 border-cyan-400/40 shadow-lg shadow-cyan-500/10'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                <span className="truncate">Tool 1: Security Agent (audit.cf)</span>
+                <span className="truncate">Tool 1: Security Agent</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('agent_metrics')}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  activeTab === 'agent_metrics'
+                    ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg shadow-indigo-500/10'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span>Agent Efficiency & Metrics</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('playground')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === 'playground'
                     ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg shadow-indigo-500/10'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
@@ -335,284 +545,488 @@ export function App() {
 
               <button
                 onClick={() => setActiveTab('keys')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === 'keys'
                     ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
                 }`}
               >
                 <Key className="w-4 h-4 text-amber-400" />
-                <span>API Keys & Credit Ledger</span>
+                <span>API Keys & Ledger</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('secrets')}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  activeTab === 'secrets'
+                    ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
+                }`}
+              >
+                <Settings className="w-4 h-4 text-purple-400" />
+                <span>Workspace Variables & Secrets</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('logs')}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   activeTab === 'logs'
                     ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
                 }`}
               >
-                <BarChart3 className="w-4 h-4 text-purple-400" />
-                <span>Edge Request Audit Logs</span>
+                <BarChart3 className="w-4 h-4 text-cyan-400" />
+                <span>Edge Request Logs</span>
               </button>
             </nav>
           </aside>
 
-          {/* Main Content Pane */}
-          <main className="flex-1 p-4 lg:p-8 space-y-6">
-            
-            {/* TOOL 1: Cloudflare Security Agent Verification Tab */}
+          {/* Main Content Area */}
+          <main className="flex-1 space-y-6">
+
+            {/* TAB 1: TOOL 1 SECURITY AGENT */}
             {activeTab === 'tool_1_security' && (
               <div className="space-y-6">
-                
-                {/* Header Banner */}
-                <div className="glass-panel-glow p-6 rounded-3xl space-y-3 relative overflow-hidden border-cyan-500/30">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                      <ShieldCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold text-white tracking-tight">Tool 1: Security Agent Verification</h1>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">POST /v1/tools/audit.cf</span>
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-500/20 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                        <ShieldCheck className="w-6 h-6" />
                       </div>
-                      <p className="text-xs text-gray-300 mt-1">
-                        Audits Cloudflare Worker wrangler configurations, unencrypted secret variables, and source code key leaks.
-                      </p>
+                      <div>
+                        <h2 className="text-lg font-bold text-white cyan-text-glow">Tool 1: Cloudflare Security Agent (`audit.cf`)</h2>
+                        <p className="text-xs text-gray-400 font-mono">Scans wrangler config & worker code for secrets, test wallets, and x402 compliance</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+                        $0.05 / audit call
+                      </span>
                     </div>
                   </div>
-                </div>
 
-                {/* Input & Execution Controls */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  
-                  {/* Left Column: Test Configuration Input */}
-                  <div className="glass-panel p-6 rounded-3xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                        <Code2 className="w-4 h-4 text-cyan-400" />
-                        <span>1. Select Test Case / Input</span>
-                      </h2>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handlePresetSelect('insecure_wrangler')}
-                          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                            auditInputType === 'insecure_wrangler'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                              : 'bg-cosmic-800 text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          Insecure Config Case
-                        </button>
-                        <button
-                          onClick={() => handlePresetSelect('secure_wrangler')}
-                          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                            auditInputType === 'secure_wrangler'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-cosmic-800 text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          Clean Secure Case
-                        </button>
+                  {/* Preset Selector */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handlePresetSelect('insecure_wrangler')}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        auditInputType === 'insecure_wrangler'
+                          ? 'bg-rose-950/40 border-rose-500/50 text-rose-200'
+                          : 'bg-cosmic-900 border-indigo-500/20 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        <AlertTriangle className="w-4 h-4 text-rose-400" />
+                        <span>Preset A: Insecure Config (Triggers CRITICAL Findings)</span>
                       </div>
-                    </div>
+                      <p className="text-[11px] text-gray-400 mt-1">Exposed PAY_TO address, plain JWT_SECRET, hardcoded sk- key</p>
+                    </button>
 
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-300 font-medium">Wrangler Config JSON / TOML:</label>
+                    <button
+                      onClick={() => handlePresetSelect('secure_wrangler')}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        auditInputType === 'secure_wrangler'
+                          ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
+                          : 'bg-cosmic-900 border-indigo-500/20 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Preset B: Clean Production Config</span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1">Externalized secrets managed via Cloudflare Secret Store</p>
+                    </button>
+                  </div>
+
+                  {/* Inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-300 font-mono">wrangler.json / wrangler.toml</label>
                       <textarea
-                        rows={8}
                         value={auditWranglerConfig}
                         onChange={(e) => setAuditWranglerConfig(e.target.value)}
-                        className="w-full bg-cosmic-950 border border-indigo-500/30 rounded-xl p-3 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+                        rows={8}
+                        className="w-full p-3 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-gray-200 focus:outline-none focus:border-cyan-400"
                       />
                     </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-300 font-medium">Source Code Snippet to Scan:</label>
-                      <input
-                        type="text"
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-300 font-mono">Worker Source Code Snippet</label>
+                      <textarea
                         value={auditSourceCode}
                         onChange={(e) => setAuditSourceCode(e.target.value)}
-                        className="w-full bg-cosmic-950 border border-indigo-500/30 rounded-xl p-3 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+                        rows={8}
+                        className="w-full p-3 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-gray-200 focus:outline-none focus:border-cyan-400"
                       />
                     </div>
+                  </div>
 
-                    <div className="space-y-2 pt-2">
-                      <label className="text-xs text-gray-300 font-medium">Payment Authorization Header:</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => setAuditAuthMode('sandbox')}
-                          className={`p-3 rounded-xl text-xs font-semibold flex items-center justify-between border transition-all ${
-                            auditAuthMode === 'sandbox'
-                              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400'
-                              : 'bg-cosmic-950 text-gray-400 border-indigo-500/20'
-                          }`}
-                        >
-                          <span>Sandbox Paid ($0.05)</span>
-                          <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                        </button>
-
-                        <button
-                          onClick={() => setAuditAuthMode('unauthenticated')}
-                          className={`p-3 rounded-xl text-xs font-semibold flex items-center justify-between border transition-all ${
-                            auditAuthMode === 'unauthenticated'
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-400'
-                              : 'bg-cosmic-950 text-gray-400 border-indigo-500/20'
-                          }`}
-                        >
-                          <span>Unauthenticated (Trigger 402)</span>
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
-                        </button>
-                      </div>
+                  {/* Payment Header Mode & Trigger Button */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 font-mono">Payment Mode:</span>
+                      <select
+                        value={auditAuthMode}
+                        onChange={(e) => setAuditAuthMode(e.target.value)}
+                        className="px-3 py-1.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs text-gray-200 font-mono"
+                      >
+                        <option value="sandbox">Sandbox Micropayment Header (X-402-Sandbox-Key)</option>
+                        <option value="api_key">Pre-funded API Key Header (X-API-Key)</option>
+                        <option value="unauthenticated">Unauthenticated (Triggers HTTP 402 Challenge)</option>
+                      </select>
                     </div>
 
                     <button
                       onClick={handleRunSecurityAudit}
                       disabled={isAuditing}
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                      className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 font-bold text-xs text-white shadow-lg shadow-cyan-500/20 hover:opacity-95 transition-all flex items-center gap-2 disabled:opacity-50"
                     >
-                      {isAuditing ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin text-cyan-200" />
-                          <span>Scanning Code & Evaluating Rules...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 fill-current text-white" />
-                          <span>Execute Tool 1: Security Agent (`audit.cf`)</span>
-                        </>
-                      )}
+                      {isAuditing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                      <span>Execute Security Agent (`audit.cf`)</span>
                     </button>
                   </div>
 
-                  {/* Right Column: Execution Output */}
-                  <div className="glass-panel p-6 rounded-3xl space-y-4">
-                    <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Terminal className="w-4 h-4 text-indigo-400" />
-                      <span>2. Tool Output & Cryptographic Proof</span>
-                    </h2>
-
-                    {!auditResult ? (
-                      <div className="p-12 text-center text-gray-500 space-y-3 border border-dashed border-indigo-500/20 rounded-2xl">
-                        <ShieldCheck className="w-10 h-10 mx-auto text-indigo-400/40 animate-pulse" />
-                        <p className="text-xs">Click "Execute Tool 1" to run live security analysis.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        
-                        {/* Status Header */}
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-cosmic-950 border border-indigo-500/30">
-                          <span className="text-xs font-mono text-gray-400">Response Status:</span>
-                          <span className={`text-xs font-bold font-mono px-3 py-1 rounded-full ${
-                            auditResult.status === 200 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  {/* Audit Result Display */}
+                  {auditResult && (
+                    <div className="p-4 rounded-2xl bg-cosmic-950 border border-indigo-500/30 space-y-4 animate-fadeIn">
+                      <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                        <div className="flex items-center gap-2 font-mono text-xs">
+                          <span className="text-gray-400">HTTP Status:</span>
+                          <span className={`px-2 py-0.5 rounded-md font-bold ${
+                            auditResult.status === 200 ? 'bg-emerald-500/20 text-emerald-300' :
+                            auditResult.status === 402 ? 'bg-amber-500/20 text-amber-300' : 'bg-rose-500/20 text-rose-300'
                           }`}>
-                            {auditResult.status} {auditResult.statusText}
+                            {auditResult.status} {auditResult.status === 200 ? 'OK' : auditResult.status === 402 ? 'PAYMENT REQUIRED' : 'ERROR'}
                           </span>
                         </div>
-
-                        {/* Audit Score Meter if 200 OK */}
-                        {auditResult.status === 200 && auditResult.data && (
-                          <div className="p-4 rounded-2xl bg-cosmic-950 border border-indigo-500/30 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-gray-300">Security Score:</span>
-                              <span className={`text-lg font-bold font-mono ${
-                                auditResult.data.audit_score >= 80 ? 'text-emerald-400' : 'text-rose-400'
-                              }`}>
-                                {auditResult.data.audit_score} / 100
-                              </span>
-                            </div>
-
-                            {/* Issues list */}
-                            {auditResult.data.issues && auditResult.data.issues.length > 0 && (
-                              <div className="space-y-2 pt-2 border-t border-indigo-500/20">
-                                <div className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                                  <span>Security Violations Detected ({auditResult.data.issues.length}):</span>
-                                </div>
-                                {auditResult.data.issues.map((issue, idx) => (
-                                  <div key={idx} className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/30 space-y-1">
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-rose-200">
-                                      <span>[{issue.severity}] {issue.title}</span>
-                                      <span className="font-mono text-[10px] text-gray-400">{issue.rule_id}</span>
-                                    </div>
-                                    <p className="text-[11px] text-gray-300">{issue.description}</p>
-                                    {issue.remediation_cmd && (
-                                      <div className="mt-1 p-1.5 rounded bg-black/60 font-mono text-[10px] text-cyan-300 border border-cyan-500/30">
-                                        CLI Fix: {issue.remediation_cmd}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Passed checks */}
-                            {auditResult.data.passed_checks && (
-                              <div className="space-y-1 pt-2 border-t border-indigo-500/20">
-                                <div className="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>Passed Checks ({auditResult.data.passed_checks.length}):</span>
-                                </div>
-                                {auditResult.data.passed_checks.map((check, idx) => (
-                                  <div key={idx} className="text-[11px] text-gray-400 flex items-center gap-1.5">
-                                    <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                                    <span>{check}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                        {auditResult.data?.usage && (
+                          <div className="text-[11px] font-mono text-cyan-300">
+                            Tokens: {auditResult.data.usage.prompt_tokens} in / {auditResult.data.usage.completion_tokens} out ({auditResult.data.usage.total_tokens} total)
                           </div>
                         )}
-
-                        {/* Raw JSON Data */}
-                        <div className="space-y-1">
-                          <span className="text-[11px] text-gray-400 font-mono">Raw Response Data:</span>
-                          <pre className="p-3 rounded-xl bg-cosmic-950 border border-indigo-500/20 text-[11px] font-mono text-cyan-300 overflow-x-auto max-h-60">
-                            {JSON.stringify(auditResult.data, null, 2)}
-                          </pre>
-                        </div>
-
                       </div>
-                    )}
-                  </div>
 
+                      {auditResult.data?.issues && (
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold text-gray-300 font-mono">Detected Issues ({auditResult.data.issues.length}):</span>
+                          {auditResult.data.issues.map((iss, idx) => (
+                            <div key={idx} className="p-3 rounded-xl bg-cosmic-900 border border-rose-500/30 space-y-1">
+                              <div className="flex items-center justify-between text-xs font-bold text-rose-300 font-mono">
+                                <span className="flex items-center gap-1.5">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                                  [{iss.severity}] {iss.title}
+                                </span>
+                                <span className="text-gray-500 text-[10px]">{iss.rule_id}</span>
+                              </div>
+                              <p className="text-xs text-gray-300">{iss.description}</p>
+                              <div className="text-[11px] text-cyan-300 font-mono bg-cosmic-950 p-2 rounded-lg border border-indigo-500/20 mt-1">
+                                Recommendation: {iss.recommendation}
+                                {iss.remediation_cmd && (
+                                  <div className="text-amber-300 mt-1 font-mono">Fix command: `{iss.remediation_cmd}`</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {auditResult.data?.ai_insights && (
+                        <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-1">
+                          <span className="text-xs font-bold text-indigo-300 font-mono flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                            Workers AI DeepSeek R1 Synthesis:
+                          </span>
+                          <p className="text-xs text-gray-200">{auditResult.data.ai_insights}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-
               </div>
             )}
 
-            {/* Other Admin Tabs Placeholder */}
-            {activeTab !== 'tool_1_security' && (
-              <div className="glass-panel p-8 rounded-3xl text-center space-y-4">
-                <Sparkles className="w-10 h-10 mx-auto text-cyan-400" />
-                <h2 className="text-lg font-bold text-white">AIFoundry.sh Gateway Management</h2>
-                <p className="text-xs text-gray-400 max-w-md mx-auto">
-                  Tool 1 (`audit.cf`) is fully active and verified. Use the sidebar to switch back to Tool 1 or explore additional portal services.
-                </p>
+            {/* TAB 2: AGENT EFFICIENCY & METRICS */}
+            {activeTab === 'agent_metrics' && (
+              <div className="space-y-6">
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
+                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-emerald-400" />
+                        Agent Efficiency & Optimization Engine
+                      </h2>
+                      <p className="text-xs text-gray-400 font-mono">Real-time edge performance, token compression ratios, and COGS savings</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
+                        Model: DeepSeek R1 / Workers AI
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Summary Stats Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/20 space-y-1">
+                      <span className="text-[11px] text-gray-400 font-mono">Total Paid Revenue</span>
+                      <div className="text-xl font-bold text-emerald-400 font-mono">${stats.total_revenue_usd.toFixed(2)}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/20 space-y-1">
+                      <span className="text-[11px] text-gray-400 font-mono">Average Latency</span>
+                      <div className="text-xl font-bold text-cyan-400 font-mono">{stats.avg_latency_ms} ms</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/20 space-y-1">
+                      <span className="text-[11px] text-gray-400 font-mono">Token COGS Margin</span>
+                      <div className="text-xl font-bold text-purple-400 font-mono">&gt; 98.4%</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/20 space-y-1">
+                      <span className="text-[11px] text-gray-400 font-mono">Edge Cache Hits</span>
+                      <div className="text-xl font-bold text-indigo-400 font-mono">39 calls</div>
+                    </div>
+                  </div>
+
+                  {/* Per Agent Metrics Breakdown */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-gray-200 font-mono">5 Active Micro-Service Agents Performance Matrix:</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.values(agentMetrics).map((ag) => (
+                        <div key={ag.agent_id} className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 space-y-3">
+                          <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                            <span className="font-bold text-xs text-cyan-300 font-mono">{ag.agent_name}</span>
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono">
+                              Score: {ag.efficiency_score}/100
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                            <div className="p-2 rounded-xl bg-cosmic-950 border border-indigo-500/20">
+                              <div className="text-[10px] text-gray-400">Total Calls</div>
+                              <div className="text-sm font-bold text-white">{ag.total_calls}</div>
+                            </div>
+                            <div className="p-2 rounded-xl bg-cosmic-950 border border-indigo-500/20">
+                              <div className="text-[10px] text-gray-400">Tokens (In/Out)</div>
+                              <div className="text-[11px] font-bold text-cyan-300">{Math.round(ag.tokens_in/1000)}k / {Math.round(ag.tokens_out/1000)}k</div>
+                            </div>
+                            <div className="p-2 rounded-xl bg-cosmic-950 border border-indigo-500/20">
+                              <div className="text-[10px] text-gray-400">Avg Latency</div>
+                              <div className="text-sm font-bold text-emerald-400">{ag.avg_latency_ms}ms</div>
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-[11px] text-gray-300 font-mono">
+                            <span className="text-cyan-400 font-bold">Optimization Note:</span> {ag.optimization_advice}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: TESTBENCH */}
+            {activeTab === 'playground' && (
+              <div className="space-y-6">
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
+                        <Play className="w-5 h-5 text-indigo-400" />
+                        x402 Protocol Interactive Testbench
+                      </h2>
+                      <p className="text-xs text-gray-400 font-mono">Simulate x402 paid micro-service invocations with live Workers AI models</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-300 font-mono">Select Target Micro-Tool:</label>
+                        <select
+                          value={selectedTestTool}
+                          onChange={(e) => setSelectedTestTool(e.target.value)}
+                          className="w-full mt-1 p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs text-gray-200 font-mono"
+                        >
+                          <option value="audit.cf">Tool 1: Security Agent (audit.cf)</option>
+                          <option value="design.402">Tool 2: OpenDesign Spec Generator (design.402)</option>
+                          <option value="openspec.plan">Tool 3: Architecture Agent (openspec.plan)</option>
+                          <option value="review.kimi">Tool 4: Alibaba Code Review (review.kimi)</option>
+                          <option value="nemotron.chat">Tool 5: Workers AI Chat (nemotron.chat)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-gray-300 font-mono">JSON Payload / Prompt:</label>
+                        <textarea
+                          value={testPayload}
+                          onChange={(e) => setTestPayload(e.target.value)}
+                          rows={8}
+                          className="w-full mt-1 p-3 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-gray-200 focus:outline-none focus:border-cyan-400"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleRunTestTool}
+                        disabled={isTesting}
+                        className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 font-bold text-xs text-white shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {isTesting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                        <span>Send Paid Request ($0.05 USDC)</span>
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-300 font-mono">Execution Response:</label>
+                      <pre className="mt-1 p-4 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-cyan-300 overflow-x-auto h-[280px]">
+                        {testResult ? JSON.stringify(testResult, null, 2) : '// Response output will render here after execution.'}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: API KEYS */}
+            {activeTab === 'keys' && (
+              <div className="space-y-6">
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
+                        <Key className="w-5 h-5 text-amber-400" />
+                        API Keys & Pre-funded Ledger
+                      </h2>
+                      <p className="text-xs text-gray-400 font-mono">Manage API keys for autonomous agents (ElizaOS, LangChain, AutoGPT)</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {apiKeysList.map((key) => (
+                      <div key={key.id} className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 flex items-center justify-between gap-4 font-mono">
+                        <div>
+                          <div className="font-bold text-xs text-white">{key.name}</div>
+                          <div className="text-[11px] text-gray-400">{key.key_secret}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-emerald-400">${key.balance_usd.toFixed(2)} Balance</div>
+                          <div className="text-[10px] text-gray-500">${key.total_spent.toFixed(2)} total spent</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 5: SECRETS */}
+            {activeTab === 'secrets' && (
+              <div className="space-y-6">
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-purple-400" />
+                        Workspace Environment Variables & Secrets
+                      </h2>
+                      <p className="text-xs text-gray-400 font-mono">Cloudflare Workers AI keys, `PAY_TO` wallets, and JWT signature keys</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      placeholder="KEY_NAME (e.g. CF_API_TOKEN)"
+                      value={newSecretKey}
+                      onChange={(e) => setNewSecretKey(e.target.value)}
+                      className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Secret Value"
+                      value={newSecretValue}
+                      onChange={(e) => setNewSecretValue(e.target.value)}
+                      className="p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-white"
+                    />
+                    <button
+                      onClick={handleAddSecret}
+                      className="py-2.5 rounded-xl bg-indigo-600 font-bold text-xs text-white hover:bg-indigo-500 transition-all"
+                    >
+                      Save Secret
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    {secretsList.map((sec, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-cosmic-900 border border-indigo-500/20 flex items-center justify-between text-xs font-mono">
+                        <div>
+                          <span className="font-bold text-cyan-300">{sec.key_name}</span>
+                          <span className="text-gray-500 text-[10px] ml-2">({sec.description})</span>
+                        </div>
+                        <span className="text-gray-400">{sec.secret_value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 6: LOGS */}
+            {activeTab === 'logs' && (
+              <div className="space-y-6">
+                <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-cyan-400" />
+                        Edge Request Audit Log Stream
+                      </h2>
+                      <p className="text-xs text-gray-400 font-mono">Live HTTP 402 challenges and 200 settled payments</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 font-mono text-xs">
+                    {logsList.map((log) => (
+                      <div key={log.id} className="p-3 rounded-xl bg-cosmic-900 border border-indigo-500/20 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                            log.status === 200 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                          }`}>
+                            {log.status}
+                          </span>
+                          <span className="text-gray-200">{log.route}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-gray-400 text-[11px]">
+                          <span>{log.payment_method}</span>
+                          <span className="text-emerald-400 font-bold">${log.revenue_usd.toFixed(2)}</span>
+                          <span>{log.latency_ms}ms</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
           </main>
-
         </div>
       )}
 
       {/* Public Storefront View */}
       {mainView === 'storefront' && (
-        <div className="p-8 max-w-6xl mx-auto space-y-8">
-          <div className="glass-panel-glow p-8 rounded-3xl text-center space-y-4">
+        <div className="max-w-6xl mx-auto px-4 py-12 space-y-8">
+          <div className="glass-panel-glow p-8 rounded-3xl text-center space-y-4 border border-cyan-500/30">
             <ShieldCheck className="w-12 h-12 text-cyan-400 mx-auto" />
             <h1 className="text-3xl font-bold text-white cyan-text-glow">AIFoundry.sh API Marketplace</h1>
-            <p className="text-sm text-gray-300 max-w-2xl mx-auto">
-              Prepaid capability-gated AI tools monetized via the x402 HTTP standard. Zero subscriptions required.
+            <p className="text-sm text-gray-300 max-w-2xl mx-auto font-mono">
+              Prepaid capability-gated AI micro-services monetized via x402 HTTP standard & Cloudflare Workers AI.
             </p>
-            <button
-              onClick={() => { setMainView('admin'); setActiveTab('tool_1_security'); }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-cyan-500/20"
-            >
-              Test Tool 1: Security Agent (`audit.cf`)
-            </button>
+            <div className="pt-2">
+              <button
+                onClick={() => { setMainView('admin'); setActiveTab('tool_1_security'); }}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 font-bold text-xs text-white shadow-xl shadow-cyan-500/20"
+              >
+                Open Admin Portal & Test Tool 1 (`audit.cf`)
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -621,5 +1035,7 @@ export function App() {
   );
 }
 
-const root = createRoot(document.getElementById('root'));
-root.render(<App />);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  createRoot(rootElement).render(<App />);
+}

@@ -65,8 +65,11 @@ export async function runNemotron(
     }
   }
 
-  // Option B: Native Cloudflare Workers AI TypeScript Binding (`env.AI`)
-  // State-of-the-art DeepSeek R1 Reasoning / NVIDIA Nemotron / Llama 3.3 models
+  // Option B: Native Cloudflare Workers AI TypeScript Binding (`env.AI`) or Cloudflare API Token REST Endpoint
+  const cfToken = env?.CF_API_TOKEN || env?.CLOUDFLARE_API_TOKEN || env?.AI_API_TOKEN || env?.CF_TOKEN || env?.CLOUDFLARE_TOKEN;
+  const cfAccountId = env?.CF_ACCOUNT_ID || env?.CLOUDFLARE_ACCOUNT_ID || env?.ACCOUNT_ID;
+
+  // B1. Native Binding via env.AI
   if (env?.AI) {
     const candidateModels = [
       env.NEMOTRON_MODEL || '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
@@ -102,7 +105,61 @@ export async function runNemotron(
           };
         }
       } catch (e) {
-        console.warn(`Workers AI model ${modelName} attempt failed, trying next candidate:`, e);
+        console.warn(`Workers AI binding model ${modelName} attempt failed:`, e);
+      }
+    }
+  }
+
+  // B2. Direct REST API Call to Cloudflare Workers AI using CF_API_TOKEN
+  if (cfToken) {
+    const accountId = cfAccountId || 'me';
+    const candidateModels = [
+      env.NEMOTRON_MODEL || '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
+      '@cf/nvidia/nemotron-3-120b-a12b',
+      '@cf/meta/llama-3.3-70b-instruct'
+    ];
+
+    for (const modelName of candidateModels) {
+      try {
+        const cfAiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelName}`;
+        const response = await fetch(cfAiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cfToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'system', content: 'You are AIFoundry.sh AI Engine powering x402 paid micro-services.' },
+              { role: 'user', content: promptText }
+            ],
+            max_tokens: req.max_tokens || 1024
+          })
+        });
+
+        if (response.ok) {
+          const data: any = await response.json();
+          const responseText = data?.result?.response || (typeof data?.result === 'string' ? data.result : null);
+          if (responseText) {
+            const pTokens = Math.ceil(promptText.length / 4);
+            const cTokens = Math.ceil(responseText.length / 4);
+
+            return {
+              result: responseText,
+              usage: {
+                prompt_tokens: pTokens,
+                completion_tokens: cTokens,
+                total_tokens: pTokens + cTokens
+              },
+              model: modelName,
+              provider: 'workers_ai'
+            };
+          }
+        } else {
+          console.warn(`Cloudflare Workers AI REST API call failed (${response.status}):`, await response.text());
+        }
+      } catch (e) {
+        console.warn(`Cloudflare API Token REST call for ${modelName} failed:`, e);
       }
     }
   }
