@@ -274,23 +274,10 @@ app.post('/v1/tools/:toolName', async (c) => {
 
 // App & Static Asset Serving
 app.get('*', async (c) => {
-  const accept = c.req.header('accept') || '';
-  if (accept.includes('application/json') && !accept.includes('text/html')) {
-    return c.json({
-      name: 'AIFoundry.sh x402 Gateway',
-      protocol: 'x402 (HTTP 402 Payment Required)',
-      version: '1.0.0',
-      description: 'Autonomous AI Monetized Gateway — Pay $0.05 USDC per call',
-      catalog_endpoint: '/v1/tools',
-      x402_spec_endpoint: '/.well-known/x402'
-    });
-  }
-
   if (c.env.ASSETS) {
     return c.env.ASSETS.fetch(c.req.raw);
   }
-
-  return c.json({ status: 'ok', name: 'AIFoundry.sh x402 Gateway' });
+  return c.text('Not found', 404);
 });
 
 export default app;
