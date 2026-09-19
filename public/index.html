@@ -38,25 +38,6 @@
           fontFamily: {
             sans: ['Inter', 'system-ui', 'sans-serif'],
             mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
-          },
-          animation: {
-            'tesseract-rotate': 'tesseractRotate 12s linear infinite',
-            'quantum-pulse': 'quantumPulse 4s ease-in-out infinite',
-            'nebula-float': 'nebulaFloat 18s ease-in-out infinite',
-          },
-          keyframes: {
-            tesseractRotate: {
-              '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
-              '100%': { transform: 'rotateX(360deg) rotateY(360deg) rotateZ(360deg)' },
-            },
-            quantumPulse: {
-              '0%, 100%': { opacity: '0.4', filter: 'drop-shadow(0 0 10px rgba(34,211,238,0.4))' },
-              '50%': { opacity: '0.9', filter: 'drop-shadow(0 0 25px rgba(99,102,241,0.8))' },
-            },
-            nebulaFloat: {
-              '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-              '50%': { transform: 'translate(20px, -20px) scale(1.1)' },
-            }
           }
         }
       }
@@ -66,21 +47,32 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    body {
-      background-color: #030712;
-      color: #f3f4f6;
-      font-family: 'Inter', sans-serif;
+    /* Prevent hydration screen flash */
+    html, body {
+      background-color: #030712 !important;
+      color: #f3f4f6 !important;
+      font-family: 'Inter', system-ui, sans-serif;
       overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
     }
 
-    /* Cosmic Grid Background */
+    #root {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #030712;
+    }
+
+    /* Stable Cosmic Background without jarring repaints */
     .cosmic-grid {
+      background-color: #030712;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
-        radial-gradient(circle at 100% 100%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
     }
 
     /* Custom scrollbar */
@@ -100,19 +92,13 @@
     }
 
     .glass-panel {
-      background: rgba(10, 16, 36, 0.75);
-      backdrop-filter: blur(12px);
+      background: rgba(10, 16, 36, 0.85);
       border: 1px solid rgba(99, 102, 241, 0.2);
     }
     .glass-panel-glow {
-      background: rgba(10, 16, 36, 0.85);
-      backdrop-filter: blur(16px);
+      background: rgba(10, 16, 36, 0.92);
       border: 1px solid rgba(34, 211, 238, 0.3);
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.12), inset 0 0 15px rgba(99, 102, 241, 0.08);
-    }
-
-    .cyan-text-glow {
-      text-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.08);
     }
   </style>
 

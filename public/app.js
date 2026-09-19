@@ -32,16 +32,18 @@ import {
   Lock,
   Workflow,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Key,
+  Sliders,
+  CheckCircle
 } from 'lucide-react';
 
 const h = React.createElement;
 
 const CosmicLogo = () => {
-  return h('div', { className: 'relative w-10 h-10 flex items-center justify-center shrink-0' },
-    h('div', { className: 'absolute inset-0 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 blur-md opacity-70 animate-pulse' }),
-    h('div', { className: 'relative w-10 h-10 rounded-xl bg-slate-950 border border-cyan-500/40 flex items-center justify-center shadow-inner' },
-      h('svg', { viewBox: '0 0 100 100', className: 'w-6 h-6 text-cyan-400' },
+  return h('div', { className: 'relative w-9 h-9 flex items-center justify-center shrink-0' },
+    h('div', { className: 'w-9 h-9 rounded-xl bg-slate-900 border border-cyan-500/50 flex items-center justify-center shadow-md' },
+      h('svg', { viewBox: '0 0 100 100', className: 'w-5 h-5 text-cyan-400' },
         h('polygon', { points: '20,20 80,20 80,80 20,80', stroke: 'currentColor', fill: 'none', strokeWidth: '6' }),
         h('polygon', { points: '35,35 65,35 65,65 35,65', stroke: '#818cf8', fill: 'none', strokeWidth: '6' }),
         h('circle', { cx: '50', cy: '50', r: '8', fill: '#22d3ee' })
@@ -55,37 +57,60 @@ const toolDetails = {
     title: 'OpenSpec Software Architecture Plan',
     price: '$0.05 USDC',
     desc: 'Generates production software architecture specs, multi-agent roles, business models, and technical dev plans based on Fission AI OpenSpec format.',
-    provider: 'Fission AI OpenSpec + DeepSeek R1'
+    provider: 'Fission AI OpenSpec + DeepSeek R1',
+    defaultPayload: JSON.stringify({
+      goal: 'Build an AI monetized image generator on Cloudflare Workers'
+    }, null, 2)
   },
   'review.kimi': {
     title: 'Alibaba Open Code Review (Kimi)',
     price: '$0.05 USDC',
     desc: 'AST code review engine with token receipt metering, security flaw detection, and COGS margin tracking based on Alibaba Open Code Review.',
-    provider: 'Alibaba Open Code Review'
+    provider: 'Alibaba Open Code Review',
+    defaultPayload: JSON.stringify({
+      code: 'export default { async fetch(request, env) { const token = "sk-proj-1234567890abcdef"; return new Response("OK"); } }',
+      language: 'typescript'
+    }, null, 2)
   },
   'audit.cf': {
     title: 'Cloudflare Workers Security Audit',
     price: '$0.05 USDC',
     desc: 'Scans Wrangler configs & Worker code for exposed secrets, insecure bindings, and x402 payment readiness.',
-    provider: 'Cloudflare Security Audit Skill'
+    provider: 'Cloudflare Security Audit Skill',
+    defaultPayload: JSON.stringify({
+      wrangler_config: 'name = "x402-gateway-worker"\ncompatibility_date = "2024-09-23"\n\n[vars]\nPAY_TO = "0x003cC678764C8143a4b92370acB40e3B41319016"\nJWT_SECRET = "sk-proj-super-secret-key-1234"',
+      source_code: 'export default { fetch() { return new Response("Hello x402"); } }'
+    }, null, 2)
   },
   'crypto.vault': {
     title: 'Zero-Knowledge Vault Guard',
     price: '$0.05 USDC',
     desc: 'AES-256-GCM hardware isolate encryption & PII scan so AI agents never transport financial/banking metadata in plaintext.',
-    provider: 'WebCrypto Edge Isolate'
+    provider: 'WebCrypto Edge Isolate',
+    defaultPayload: JSON.stringify({
+      action: 'encrypt',
+      data: '{"ssn": "000-12-3456", "card": "4111-2222-3333-4444", "balance": "$50,000"}',
+      passphrase: 'vault-master-passphrase-2026'
+    }, null, 2)
   },
   'design.402': {
     title: 'OpenDesign UI Spec Generator',
     price: '$0.05 USDC',
     desc: 'Generates tailwind design tokens, atomic component hierarchies, SVG logo specs, and x402 payment modal wireframes.',
-    provider: 'OpenDesign DeepSeek'
+    provider: 'OpenDesign DeepSeek',
+    defaultPayload: JSON.stringify({
+      topic: 'x402 Micro-SaaS Payment Gateway Dashboard',
+      style: 'saas-dark'
+    }, null, 2)
   },
   'nemotron.chat': {
     title: 'Workers AI Edge Model Chat',
     price: '$0.05 USDC',
     desc: 'Direct sub-20ms edge LLM inference proxy for autonomous AI agents.',
-    provider: 'Cloudflare Workers AI (Nemotron/DeepSeek)'
+    provider: 'Cloudflare Workers AI (Nemotron/DeepSeek)',
+    defaultPayload: JSON.stringify({
+      prompt: 'Compare unit economics of $0.05 USDC pay-per-call vs monthly SaaS subscription for AI developer APIs.'
+    }, null, 2)
   }
 };
 
@@ -156,21 +181,29 @@ contract X402PaymentGateway {
 }`;
 
 export function App() {
-  const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'contract', 'arch', 'roles', 'business', 'llmstxt'
+  const [activeTab, setActiveTab] = useState('simulator');
   const [notification, setNotification] = useState(null);
 
   // Simulator State
   const [selectedTool, setSelectedTool] = useState('openspec.plan');
-  const [payMode, setPayMode] = useState('unpaid'); // 'unpaid' or 'paid'
-  const [paymentTxHash, setPaymentTxHash] = useState('tx_0x9f8a32b...usdc_paid');
-  const [customPrompt, setCustomPrompt] = useState('{\n  "goal": "Build an AI monetized image generator on Cloudflare Workers"\n}');
+  const [payMode, setPayMode] = useState('paid');
+  const [selectedNetwork, setSelectedNetwork] = useState('base');
+  const [paymentTxHash, setPaymentTxHash] = useState('tx_0x9f8a32b7c61d...usdc_paid');
+  const [customPrompt, setCustomPrompt] = useState(toolDetails['openspec.plan'].defaultPayload);
+  
+  // Cloudflare Execution Options
+  const [cfToken, setCfToken] = useState('');
+  const [cfAccountId, setCfAccountId] = useState('');
+  const [showCfSettings, setShowCfSettings] = useState(false);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [execResult, setExecResult] = useState(null);
+  const [execLatency, setExecLatency] = useState(null);
   const [responseHeaders, setResponseHeaders] = useState(null);
 
   const showToast = (msg, type = 'info') => {
     setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 4000);
+    setTimeout(() => setNotification(null), 3500);
   };
 
   const copyToClipboard = (text, label) => {
@@ -178,10 +211,18 @@ export function App() {
     showToast(`Copied ${label} to clipboard!`, 'success');
   };
 
+  const handleToolChange = (toolKey) => {
+    setSelectedTool(toolKey);
+    setCustomPrompt(toolDetails[toolKey].defaultPayload);
+  };
+
   const executeApiCall = async () => {
     setIsExecuting(true);
     setExecResult(null);
     setResponseHeaders(null);
+    setExecLatency(null);
+
+    const startTime = performance.now();
 
     try {
       const headers = {
@@ -189,9 +230,16 @@ export function App() {
       };
 
       if (payMode === 'paid') {
-        headers['x-payment-hash'] = paymentTxHash;
-        headers['x-payment-network'] = 'base';
+        headers['X-402-Payment'] = paymentTxHash;
+        headers['x-payment-network'] = selectedNetwork;
         headers['x-payment-amount'] = '0.05';
+      }
+
+      if (cfToken.trim()) {
+        headers['x-cf-token'] = cfToken.trim();
+      }
+      if (cfAccountId.trim()) {
+        headers['x-cf-account-id'] = cfAccountId.trim();
       }
 
       let parsedBody = {};
@@ -201,11 +249,14 @@ export function App() {
         parsedBody = { prompt: customPrompt };
       }
 
-      const res = await fetch(`/v1/tools/${selectedTool}`, {
+      const res = await fetch(`/v1/tools/${selectedTool}?network=${selectedNetwork}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(parsedBody)
       });
+
+      const elapsed = Math.round(performance.now() - startTime);
+      setExecLatency(elapsed);
 
       const resHeaderMap = {};
       res.headers.forEach((val, key) => {
@@ -221,9 +272,9 @@ export function App() {
       });
 
       if (res.status === 402) {
-        showToast('HTTP 402 Payment Required returned! Challenge generated.', 'warning');
+        showToast('HTTP 402 Payment Required! x402 challenge generated.', 'warning');
       } else if (res.ok) {
-        showToast('API call executed successfully! x402 payment validated.', 'success');
+        showToast(`Tool executed in ${elapsed}ms! x402 payment settled.`, 'success');
       }
     } catch (err) {
       setExecResult({
@@ -237,9 +288,9 @@ export function App() {
     }
   };
 
-  return h('div', { className: 'min-h-screen flex flex-col font-sans' },
+  return h('div', { className: 'min-h-screen flex flex-col font-sans bg-[#030712]' },
     // Header
-    h('header', { className: 'sticky top-0 z-50 glass-panel border-b border-indigo-500/20 px-4 lg:px-8 py-3' },
+    h('header', { className: 'sticky top-0 z-50 glass-panel border-b border-indigo-500/20 px-4 lg:px-8 py-3 bg-[#030712]/90' },
       h('div', { className: 'max-w-7xl mx-auto flex items-center justify-between' },
         h('div', { className: 'flex items-center gap-3' },
           h(CosmicLogo),
@@ -253,14 +304,14 @@ export function App() {
         ),
 
         // Navigation Tabs
-        h('nav', { className: 'hidden md:flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-indigo-500/20' },
+        h('nav', { className: 'hidden md:flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-indigo-500/20' },
           [
             { id: 'simulator', label: 'API Simulator', icon: Play },
             { id: 'contract', label: 'USDC Contract & Vaults', icon: Coins },
             { id: 'arch', label: 'Architecture Plan', icon: Workflow },
             { id: 'roles', label: 'Team Roles', icon: Users },
             { id: 'business', label: 'Business Economics', icon: DollarSign },
-            { id: 'llmstxt', label: 'llms.txt Machine Context', icon: FileText }
+            { id: 'llmstxt', label: 'llms.txt Context', icon: FileText }
           ].map(tab =>
             h('button', {
               key: tab.id,
@@ -277,17 +328,17 @@ export function App() {
           )
         ),
 
-        // Mobile Nav Trigger or Network Badge
+        // Network Badge
         h('div', { className: 'flex items-center gap-2' },
           h('div', { className: 'flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-mono' },
-            h('span', { className: 'w-2 h-2 rounded-full bg-emerald-400 animate-ping' }),
+            h('span', { className: 'w-2 h-2 rounded-full bg-emerald-400' }),
             'x402 Active'
           )
         )
       ),
 
       // Mobile Nav Row
-      h('div', { className: 'flex md:hidden items-center gap-1 mt-3 overflow-x-auto pb-1 scrollbar-none' },
+      h('div', { className: 'flex md:hidden items-center gap-1 mt-3 overflow-x-auto pb-1' },
         [
           { id: 'simulator', label: 'Simulator', icon: Play },
           { id: 'contract', label: 'USDC Vaults', icon: Coins },
@@ -311,9 +362,9 @@ export function App() {
     ),
 
     // Toast Notification
-    notification && h('div', { className: 'fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl glass-panel-glow border border-cyan-400/40 text-sm font-medium shadow-2xl animate-bounce' },
+    notification && h('div', { className: 'fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl glass-panel-glow border border-cyan-400/40 text-sm font-medium shadow-2xl bg-slate-950 text-gray-100' },
       h(Sparkles, { className: 'w-5 h-5 text-cyan-400 shrink-0' }),
-      h('span', { className: 'text-gray-200' }, notification.msg)
+      h('span', null, notification.msg)
     ),
 
     // Main Content Body
@@ -321,23 +372,75 @@ export function App() {
 
       // TAB 1: SIMULATOR
       activeTab === 'simulator' && h('div', { className: 'space-y-6' },
-        h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl glass-panel border border-indigo-500/30' },
+        h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl glass-panel border border-indigo-500/30 bg-slate-900/60' },
           h('div', { className: 'space-y-1' },
             h('h2', { className: 'text-2xl font-bold text-white flex items-center gap-2' },
               h(Terminal, { className: 'w-6 h-6 text-cyan-400' }),
-              'x402 Micropayment Edge Simulator'
+              'x402 Micropayment Edge Playground'
             ),
-            h('p', { className: 'text-sm text-gray-400' }, 'Test x402 HTTP 402 challenge handling & automated zero-latency settlement across edge tool endpoints.')
+            h('p', { className: 'text-sm text-gray-400' }, 'Test every function with realistic inputs or custom Cloudflare API tokens.')
           ),
-          h('div', { className: 'flex items-center gap-3 bg-slate-950 p-1.5 rounded-xl border border-indigo-500/20' },
+          h('div', { className: 'flex flex-wrap items-center gap-3' },
+            h('div', { className: 'flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-indigo-500/20' },
+              h('button', {
+                onClick: () => setPayMode('paid'),
+                className: `px-3 py-1.5 rounded-lg text-xs font-mono ${payMode === 'paid' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold' : 'text-gray-400 hover:text-white'}`
+              }, 'Paid (Simulate x-payment-hash)'),
+              h('button', {
+                onClick: () => setPayMode('unpaid'),
+                className: `px-3 py-1.5 rounded-lg text-xs font-mono ${payMode === 'unpaid' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold' : 'text-gray-400 hover:text-white'}`
+              }, 'Unpaid (HTTP 402 Challenge)')
+            ),
             h('button', {
-              onClick: () => setPayMode('unpaid'),
-              className: `px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${payMode === 'unpaid' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold' : 'text-gray-400 hover:text-white'}`
-            }, 'Unpaid (Expect HTTP 402)'),
-            h('button', {
-              onClick: () => setPayMode('paid'),
-              className: `px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${payMode === 'paid' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold' : 'text-gray-400 hover:text-white'}`
-            }, 'Paid (Simulate x-payment-hash)')
+              onClick: () => setShowCfSettings(!showCfSettings),
+              className: `px-3 py-2 rounded-xl text-xs font-mono flex items-center gap-1.5 border transition-all ${showCfSettings || cfToken ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50' : 'bg-slate-950 text-gray-400 border-slate-800 hover:text-white'}`
+            },
+              h(Sliders, { className: 'w-3.5 h-3.5' }),
+              cfToken ? 'Cloudflare Token Set' : 'Cloudflare Token Options'
+            )
+          )
+        ),
+
+        // Optional Cloudflare Live Credentials Configurator
+        showCfSettings && h('div', { className: 'p-5 rounded-xl glass-panel border border-cyan-500/40 space-y-3 bg-slate-950' },
+          h('div', { className: 'flex items-center justify-between' },
+            h('h3', { className: 'text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2' },
+              h(Key, { className: 'w-4 h-4 text-cyan-400' }),
+              'Optional Cloudflare Account Credentials'
+            ),
+            h('span', { className: 'text-[11px] text-gray-400 font-mono' }, 'Optional: Pass CF_API_TOKEN to run against your Workers AI account directly')
+          ),
+          h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'CF_API_TOKEN (Optional)'),
+              h('input', {
+                type: 'password',
+                placeholder: 'Cloudflare Workers AI API Token...',
+                value: cfToken,
+                onChange: (e) => setCfToken(e.target.value),
+                className: 'w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-cyan-300 focus:border-cyan-400 focus:outline-none'
+              })
+            ),
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'CF_ACCOUNT_ID (Optional)'),
+              h('input', {
+                type: 'text',
+                placeholder: 'Account ID (e.g. me)',
+                value: cfAccountId,
+                onChange: (e) => setCfAccountId(e.target.value),
+                className: 'w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-cyan-300 focus:border-cyan-400 focus:outline-none'
+              })
+            ),
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-xs font-mono text-gray-400' }, 'Target Settlement Network'),
+              h('select', {
+                value: selectedNetwork,
+                onChange: (e) => setSelectedNetwork(e.target.value),
+                className: 'w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-cyan-300 focus:border-cyan-400 focus:outline-none'
+              },
+                evmNetworks.map(n => h('option', { key: n.network, value: n.network }, `${n.name} (${n.network})`))
+              )
+            )
           )
         ),
 
@@ -345,16 +448,19 @@ export function App() {
           // Tool Selector & Config
           h('div', { className: 'lg:col-span-5 space-y-4' },
             h('div', { className: 'p-5 rounded-xl glass-panel space-y-4' },
-              h('h3', { className: 'text-sm font-semibold text-gray-300 uppercase tracking-wider font-mono' }, 'Select x402 Monetized Endpoint'),
+              h('div', { className: 'flex items-center justify-between' },
+                h('h3', { className: 'text-xs font-semibold text-gray-300 uppercase tracking-wider font-mono' }, 'Select x402 Tool Function'),
+                h('span', { className: 'text-xs font-mono text-emerald-400 font-bold' }, '6 Tools Ready')
+              ),
               h('div', { className: 'space-y-2' },
                 Object.entries(toolDetails).map(([key, info]) =>
                   h('div', {
                     key,
-                    onClick: () => setSelectedTool(key),
+                    onClick: () => handleToolChange(key),
                     className: `p-3 rounded-lg border cursor-pointer transition-all ${
                       selectedTool === key
-                        ? 'bg-indigo-950/60 border-cyan-400/60 shadow-lg shadow-cyan-500/10'
-                        : 'bg-slate-900/40 border-slate-800 hover:border-indigo-500/40'
+                        ? 'bg-indigo-950/80 border-cyan-400/80 shadow-md shadow-cyan-500/10'
+                        : 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40'
                     }`
                   },
                     h('div', { className: 'flex items-center justify-between mb-1' },
@@ -368,9 +474,15 @@ export function App() {
               ),
 
               h('div', { className: 'space-y-2 pt-2 border-t border-slate-800' },
-                h('label', { className: 'text-xs font-mono text-gray-400' }, 'JSON Request Body Prompt'),
+                h('div', { className: 'flex items-center justify-between' },
+                  h('label', { className: 'text-xs font-mono text-gray-400' }, 'JSON Payload Input'),
+                  h('button', {
+                    onClick: () => setCustomPrompt(toolDetails[selectedTool].defaultPayload),
+                    className: 'text-[11px] font-mono text-cyan-400 hover:underline'
+                  }, 'Reset Preset')
+                ),
                 h('textarea', {
-                  rows: 4,
+                  rows: 5,
                   value: customPrompt,
                   onChange: (e) => setCustomPrompt(e.target.value),
                   className: 'w-full p-3 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-cyan-200 focus:border-cyan-400 focus:outline-none'
@@ -383,20 +495,21 @@ export function App() {
                 className: 'w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-600 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 hover:opacity-90 transition-all flex items-center justify-center gap-2'
               },
                 isExecuting ? h(RefreshCw, { className: 'w-4 h-4 animate-spin' }) : h(Play, { className: 'w-4 h-4' }),
-                isExecuting ? 'Executing Request...' : `Send Request to /v1/tools/${selectedTool}`
+                isExecuting ? 'Executing Function...' : `Test /v1/tools/${selectedTool}`
               )
             )
           ),
 
-          // Response & Headers Output
+          // Response & Metrics Inspector
           h('div', { className: 'lg:col-span-7 space-y-4' },
-            h('div', { className: 'p-5 rounded-xl glass-panel space-y-4 min-h-[420px] flex flex-col' },
+            h('div', { className: 'p-5 rounded-xl glass-panel space-y-4 min-h-[460px] flex flex-col' },
               h('div', { className: 'flex items-center justify-between border-b border-slate-800 pb-3' },
                 h('span', { className: 'text-sm font-semibold text-gray-300 font-mono flex items-center gap-2' },
                   h(Code2, { className: 'w-4 h-4 text-cyan-400' }),
-                  'Response Inspector & Headers'
+                  'Live Execution Output & Metrics'
                 ),
                 execResult && h('div', { className: 'flex items-center gap-2' },
+                  execLatency !== null && h('span', { className: 'px-2 py-0.5 rounded text-xs font-mono bg-indigo-500/20 text-indigo-300' }, `${execLatency}ms`),
                   h('span', { className: `px-2.5 py-1 rounded-md text-xs font-mono font-bold ${execResult.status === 402 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}` },
                     `HTTP ${execResult.status} ${execResult.statusText}`
                   ),
@@ -408,14 +521,34 @@ export function App() {
               ),
 
               !execResult ? h('div', { className: 'flex-1 flex flex-col items-center justify-center text-center p-8 text-gray-500 space-y-2' },
-                h(Compass, { className: 'w-10 h-10 text-indigo-500/40 animate-spin' }),
-                h('p', { className: 'text-sm text-gray-400' }, 'Click "Send Request" to test x402 edge challenge resolution.'),
-                h('p', { className: 'text-xs text-gray-600' }, 'Unpaid mode triggers standard HTTP 402 with L402 macaroon invoice.')
+                h(Compass, { className: 'w-10 h-10 text-indigo-500/40' }),
+                h('p', { className: 'text-sm text-gray-300 font-medium' }, 'Ready to test.'),
+                h('p', { className: 'text-xs text-gray-400' }, 'Click "Test /v1/tools/..." to execute with live x402 header verification.')
               ) : h('div', { className: 'space-y-4 flex-1' },
+
+                // Metrics Bar
+                execResult.data?.x402_settlement && h('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-2' },
+                  h('div', { className: 'p-2.5 rounded-lg bg-slate-950 border border-emerald-500/30 font-mono' },
+                    h('p', { className: 'text-[10px] text-gray-400 uppercase' }, 'Gate Price'),
+                    h('p', { className: 'text-sm font-bold text-emerald-400' }, '$0.050 USDC')
+                  ),
+                  h('div', { className: 'p-2.5 rounded-lg bg-slate-950 border border-indigo-500/30 font-mono' },
+                    h('p', { className: 'text-[10px] text-gray-400 uppercase' }, 'Workers AI COGS'),
+                    h('p', { className: 'text-sm font-bold text-cyan-300' }, '$0.000004')
+                  ),
+                  h('div', { className: 'p-2.5 rounded-lg bg-slate-950 border border-cyan-500/30 font-mono' },
+                    h('p', { className: 'text-[10px] text-gray-400 uppercase' }, 'Gross Profit'),
+                    h('p', { className: 'text-sm font-bold text-cyan-400' }, '$0.0499 USDC')
+                  ),
+                  h('div', { className: 'p-2.5 rounded-lg bg-slate-950 border border-indigo-500/30 font-mono' },
+                    h('p', { className: 'text-[10px] text-gray-400 uppercase' }, 'Net Margin'),
+                    h('p', { className: 'text-sm font-bold text-emerald-400' }, '99.92%')
+                  )
+                ),
 
                 // Headers Panel
                 responseHeaders && h('div', { className: 'space-y-1.5' },
-                  h('span', { className: 'text-[11px] font-mono uppercase tracking-wider text-gray-400' }, 'x402 Protocol Headers'),
+                  h('span', { className: 'text-[11px] font-mono uppercase tracking-wider text-gray-400' }, 'x402 Protocol HTTP Headers'),
                   h('div', { className: 'p-3 rounded-lg bg-slate-950 border border-indigo-500/20 font-mono text-xs text-indigo-300 space-y-1 overflow-x-auto' },
                     Object.entries(responseHeaders).map(([k, v]) =>
                       h('div', { key: k, className: 'flex items-start gap-2' },
@@ -476,7 +609,7 @@ export function App() {
             h('div', { className: 'p-5 rounded-xl glass-panel space-y-4' },
               h('div', { className: 'flex items-center justify-between' },
                 h('h3', { className: 'text-sm font-mono font-bold text-gray-200' }, 'Multi-Chain USDC Treasury Vaults'),
-                h('span', { className: 'text-xs text-emerald-400 font-mono' }, '14 EVM Networks Active')
+                h('span', { className: 'text-xs text-emerald-400 font-mono font-bold' }, '14 EVM Networks Active')
               ),
               h('p', { className: 'text-xs text-gray-400' }, 'All EVM networks transfer USDC directly to your primary beneficiary wallet address.'),
               h('div', { className: 'space-y-2 max-h-96 overflow-y-auto pr-1' },
@@ -666,7 +799,7 @@ export function App() {
 ## Payment Settlement Headers
 - Payment Challenge Response: HTTP 402 Payment Required
 - Header: WWW-Authenticate: L402 invoice="...", macaroon="..."
-- Settlement Header: x-payment-hash: <tx_hash>`
+- Settlement Header: X-402-Payment: <tx_hash>`
           )
         )
       )
