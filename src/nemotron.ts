@@ -10,6 +10,7 @@ export interface NemotronRequest {
   wrangler_config?: string;
   input?: string;
   topic?: string;
+  model?: string;
   messages?: Array<{ role: string; content: any }>;
   max_tokens?: number;
   temperature?: number;
@@ -19,6 +20,7 @@ export interface NemotronRequest {
   openrouter_key?: string;
   cf_token?: string;
   cf_account_id?: string;
+  cf_gateway_id?: string;
   system_prompt?: string;
 }
 
@@ -137,22 +139,35 @@ export async function runNemotron(
 
   // --- Provider Candidate 1: Native Cloudflare Workers AI Binding (`env.AI`) ---
   if (env?.AI) {
+    const gatewayId = req.cf_gateway_id || env?.CF_GATEWAY_ID || 'default';
     const candidateModels = [
+      req.model,
+      '@cf/meta/llama-3.1-8b-instruct-fast',
       '@cf/meta/llama-3.1-8b-instruct',
       '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
-      '@cf/meta/llama-3.3-70b-instruct',
+      '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
       '@cf/nvidia/nemotron-3-120b-a12b'
-    ];
+    ].filter(Boolean) as string[];
 
     for (const modelName of candidateModels) {
       try {
-        const aiRes: any = await env.AI.run(modelName, {
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: promptText }
-          ],
-          max_tokens: maxTokens
-        });
+        // Run Workers AI with AI Gateway binding option (per Cloudflare docs)
+        const aiRes: any = await env.AI.run(
+          modelName,
+          {
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: promptText }
+            ],
+            max_tokens: maxTokens
+          },
+          {
+            gateway: {
+              id: gatewayId,
+              skipCache: false
+            }
+          }
+        );
 
         let responseText = '';
         if (typeof aiRes === 'string') {
@@ -161,11 +176,13 @@ export async function runNemotron(
           responseText = typeof aiRes.response === 'string' ? aiRes.response : JSON.stringify(aiRes.response);
         } else if (aiRes?.result?.response) {
           responseText = aiRes.result.response;
+        } else if (aiRes?.choices?.[0]?.message?.content) {
+          responseText = aiRes.choices[0].message.content;
         } else if (aiRes) {
           responseText = JSON.stringify(aiRes);
         }
 
-        if (responseText && responseText.trim()) {
+        if (responseText && responseText.trim() && responseText !== '{}') {
           const pTokens = Math.ceil(promptText.length / 4);
           const cTokens = Math.ceil(responseText.length / 4);
           return {
@@ -176,7 +193,27 @@ export async function runNemotron(
           };
         }
       } catch (e) {
-        console.warn(`Workers AI model ${modelName} call failed:`, e);
+        // Fallback try with single prompt field payload
+        try {
+          const aiResFallback: any = await env.AI.run(
+            modelName,
+            { prompt: `${systemPrompt}\n\nUser: ${promptText}` },
+            { gateway: { id: gatewayId } }
+          );
+          const responseText = aiResFallback?.response || aiResFallback?.result?.response || (typeof aiResFallback === 'string' ? aiResFallback : null);
+          if (responseText && responseText.trim()) {
+            const pTokens = Math.ceil(promptText.length / 4);
+            const cTokens = Math.ceil(responseText.length / 4);
+            return {
+              result: responseText,
+              usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+              model: modelName,
+              provider: 'workers_ai'
+            };
+          }
+        } catch (e2) {
+          console.warn(`Workers AI model ${modelName} call failed:`, e2);
+        }
       }
     }
   }
@@ -302,28 +339,33 @@ export async function runNemotron(
     const resolvedAccountId = await getCfAccountId(token, accountId);
     if (!resolvedAccountId) return null;
 
+    const gatewayId = req.cf_gateway_id || env?.CF_GATEWAY_ID || 'default';
+    const chosenModel = req.model || '@cf/meta/llama-3.1-8b-instruct-fast';
+
     const models = [
-      '@cf/meta/llama-3.1-8b-instruct',
+      chosenModel,
+      '@cf/meta/llama-3.1-8b-instruct-fast',
       '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
-      '@cf/meta/llama-3.3-70b-instruct'
+      '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
     ];
 
-    // Try OpenAI-compatible endpoint first
+    // Try AI Gateway Universal OpenAI Endpoint
     try {
-      const cfOpenAiUrl = `https://api.cloudflare.com/client/v4/accounts/${resolvedAccountId}/ai/v1/chat/completions`;
-      const res = await fetch(cfOpenAiUrl, {
+      const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${resolvedAccountId}/${gatewayId}/workers-ai/v1/chat/completions`;
+      const res = await fetch(gatewayUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: '@cf/meta/llama-3.1-8b-instruct',
+          model: chosenModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: promptText }
           ],
-          max_tokens: maxTokens
+          max_tokens: maxTokens,
+          temperature
         })
       });
       if (res.ok) {
@@ -335,7 +377,44 @@ export async function runNemotron(
           return {
             result: output,
             usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
-            model: data.model || '@cf/meta/llama-3.1-8b-instruct',
+            model: data.model || chosenModel,
+            provider: 'workers_ai'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('AI Gateway Universal fetch failed:', e);
+    }
+
+    // Try Cloudflare Workers AI REST OpenAI-compatible endpoint
+    try {
+      const cfOpenAiUrl = `https://api.cloudflare.com/client/v4/accounts/${resolvedAccountId}/ai/v1/chat/completions`;
+      const res = await fetch(cfOpenAiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: chosenModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: promptText }
+          ],
+          max_tokens: maxTokens,
+          temperature
+        })
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const output = data.choices?.[0]?.message?.content;
+        if (output && output.trim()) {
+          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
+          const cTokens = data.usage?.completion_tokens || Math.ceil(output.length / 4);
+          return {
+            result: output,
+            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+            model: data.model || chosenModel,
             provider: 'workers_ai'
           };
         }

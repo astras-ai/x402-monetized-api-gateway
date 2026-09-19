@@ -424,22 +424,44 @@ app.onError((err, c) => {
   }, 500);
 });
 
+async function parseRequestBody(c: any): Promise<any> {
+  let body: any = {};
+  if (c.req.method === 'POST' || c.req.method === 'PUT') {
+    try {
+      body = await c.req.json();
+    } catch (e) {
+      try {
+        const text = await c.req.text();
+        if (text && text.trim()) {
+          body = { prompt: text, goal: text, code: text };
+        }
+      } catch (e2) {}
+    }
+  }
+
+  const qPrompt = c.req.query('prompt') || c.req.query('q') || c.req.query('goal');
+  const qCode = c.req.query('code') || c.req.query('snippet');
+  const qLang = c.req.query('language');
+  const qBrief = c.req.query('brief') || c.req.query('topic');
+  const qModel = c.req.query('model');
+
+  return {
+    ...body,
+    ...(qPrompt && !body.prompt ? { prompt: qPrompt, goal: qPrompt } : {}),
+    ...(qCode && !body.code ? { code: qCode } : {}),
+    ...(qLang && !body.language ? { language: qLang } : {}),
+    ...(qBrief && !body.brief ? { brief: qBrief } : {}),
+    ...(qModel && !body.model ? { model: qModel } : {})
+  };
+}
+
 // Direct OpenAI SDK & AI Agent Chat Completion Compatibility Endpoint
 app.on(['GET', 'POST'], ['/v1/chat/completions', '/chat/completions'], async (c) => {
   const network = c.req.query('network') || c.env.NETWORK || 'base';
   const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
   const payTo = c.env.PAY_TO || networkConfig.payTo || '0x003cC678764C8143a4b92370acB40e3B41319016';
 
-  let body: any = {};
-  if (c.req.method === 'POST') {
-    try {
-      body = await c.req.json();
-    } catch (e) {
-      body = {};
-    }
-  } else {
-    body = { prompt: c.req.query('prompt') || c.req.query('q') };
-  }
+  const body = await parseRequestBody(c);
 
   const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
   const bearerVal = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.substring(7).trim() : authHeader;
@@ -550,28 +572,7 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
   const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
   const payTo = c.env.PAY_TO || networkConfig.payTo || '0x003cC678764C8143a4b92370acB40e3B41319016';
 
-  let body: any = {};
-  if (c.req.method === 'POST') {
-    try {
-      body = await c.req.json();
-    } catch (e) {
-      body = {};
-    }
-  } else {
-    // Populate body from GET query parameters
-    body = {
-      goal: c.req.query('goal') || c.req.query('prompt'),
-      prompt: c.req.query('prompt') || c.req.query('goal'),
-      code: c.req.query('code') || c.req.query('snippet'),
-      language: c.req.query('language'),
-      brief: c.req.query('brief') || c.req.query('topic'),
-      topic: c.req.query('topic') || c.req.query('brief'),
-      action: c.req.query('action'),
-      payload: c.req.query('payload'),
-      wrangler_config: c.req.query('wrangler_config'),
-      source_code: c.req.query('source_code')
-    };
-  }
+  const body = await parseRequestBody(c);
 
   const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
   const bearerVal = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.substring(7).trim() : authHeader;
