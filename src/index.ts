@@ -6,7 +6,6 @@ import { handleOpenSpecPlan } from './tools/openspec-plan';
 import { handleReviewKimi } from './tools/review-kimi';
 import { handleAuditCf } from './tools/audit-cf';
 import { handleDesign402 } from './tools/design-402';
-import { encryptSecret, decryptSecret, isEncrypted } from './crypto-utils';
 
 type Bindings = {
   NETWORK?: string;
@@ -16,129 +15,10 @@ type Bindings = {
   NEMOTRON_URL?: string;
   NEMOTRON_TOKEN?: string;
   AI?: any;
+  ASSETS?: any;
 };
 
-// In-Memory Storage for Demo & Sandbox
-let requestLogs: any[] = [
-  {
-    id: 'log_01',
-    timestamp: new Date().toISOString(),
-    route: '/v1/tools/openspec.plan',
-    status: 200,
-    payment_method: 'L402 Macaroon',
-    revenue_usd: 0.05,
-    latency_ms: 12,
-    ip: '104.28.14.92'
-  },
-  {
-    id: 'log_02',
-    timestamp: new Date(Date.now() - 60000).toISOString(),
-    route: '/v1/tools/review.kimi',
-    status: 402,
-    payment_method: 'HTTP 402 Required',
-    revenue_usd: 0,
-    latency_ms: 2,
-    ip: '172.56.21.10'
-  },
-  {
-    id: 'log_03',
-    timestamp: new Date(Date.now() - 120000).toISOString(),
-    route: '/v1/tools/audit.cf',
-    status: 200,
-    payment_method: 'EVM USDC (Base)',
-    revenue_usd: 0.05,
-    latency_ms: 8,
-    ip: '198.51.100.4'
-  }
-];
-
-let apiKeys: any[] = [
-  {
-    id: 'key_01',
-    name: 'Primary Developer Key',
-    key_secret: 'x402_live_demo888899990000',
-    balance_usd: 25.00,
-    total_spent: 1.45,
-    status: 'active',
-    created_at: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: 'key_02',
-    name: 'Autonomous Agent ElizaOS',
-    key_secret: 'x402_agent_eliza_77889900',
-    balance_usd: 50.00,
-    total_spent: 4.80,
-    status: 'active',
-    created_at: new Date(Date.now() - 172800000).toISOString()
-  }
-];
-
-let creditLedger: any[] = [
-  {
-    id: 'tx_01',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    type: 'DEPOSIT',
-    amount_usd: 25.00,
-    description: 'Initial developer credit funding via Stripe'
-  },
-  {
-    id: 'tx_02',
-    created_at: new Date(Date.now() - 1800000).toISOString(),
-    type: 'CALL_CHARGE',
-    amount_usd: -0.05,
-    description: 'OpenSpec Plan generation call'
-  }
-];
-
-let secretsStore: any[] = [
-  {
-    key_name: 'CF_API_TOKEN',
-    secret_value: 'enc:v1:eyJpdiI6WzEyMSwxMTAsMTk4LDgwLDE0MiwxMTksOTEsMTIwLDIwMywxNzUsMTUzLDI0MV0sImN0IjpbMjUzLDI0NCwxNjcsMjQsMTE0LDE0NCwxOTEsMzUsMTQ3LDEwNywyMTEsMTgyLDY5LDEzMyw2MiwzOSwzMiwxODMsMTUsOTgsMzksOTMsMTE0LDIwNSw4NSwxMTgsMjQ3LDIzOCwxOCwxNjMsMTc3LDExMl19',
-    category: 'ai',
-    description: 'Cloudflare Workers AI API Execution Token',
-    is_encrypted: true,
-    algorithm: 'AES-256-GCM',
-    updated_at: new Date().toISOString()
-  },
-  {
-    key_name: 'CF_ACCOUNT_ID',
-    secret_value: 'enc:v1:eyJpdiI6WzEwMiw4OSwyMDEsMTQ0LDExMiw2NywxNTQsMTg4LDcxLDQ1LDEwMCwxMjNdLCJjdCI6WzExMiwyNDEsMTE0LDE5NSwyMiwxODEsMjUzLDIzOSwxMDMsMTQ3LDE2MiwxNDksMTAwLDEwNywxMjMsODJdfQ==',
-    category: 'ai',
-    description: 'Cloudflare Account ID Identifier',
-    is_encrypted: true,
-    algorithm: 'AES-256-GCM',
-    updated_at: new Date().toISOString()
-  },
-  {
-    key_name: 'PAY_WALLET',
-    secret_value: 'enc:v1:eyJpdiI6WzE4LDIwNCwxOSw0NCwxOTUsOTksMTIzLDIwMSwxMTIsNjksMTAwLDEwMV0sImN0IjpbODksOTEsMTI3LDI0MSwxNTUsMTg0LDE2OCwyMjIsOTAsMTgsNjksMTgwLDE5OCwxNjYsMTIxLDI0NywxNSwxMjgsMjM5LDExNCwxOSw4NywxODIsMTIwLDE0MSwxMjIsMTAxLDE3OCwxOTEsMTU0LDE5MywyMTMsMTEzLDk4LDk5XX0=',
-    category: 'web3',
-    description: 'EVM USDC Receiving Vault Address on Base Mainnet',
-    is_encrypted: true,
-    algorithm: 'AES-256-GCM',
-    updated_at: new Date().toISOString()
-  },
-  {
-    key_name: 'JWT_SECRET',
-    secret_value: 'enc:v1:eyJpdiI6WzY2LDE3MCwyMDIsMjMsODIsMjMsMTY1LDkwLDc3LDY1LDE0OCwxNDldLCJjdCI6WzE0OSwxNTgsMTI2LDIzNSwxOTgsMjQsODMsMTQ1LDEyMywxOTAsMTcyLDQ4LDE0NCwyMDMsMjE2LDE1NywxODMsNDgsODgsMjIxLDM3LDI0NSwxNzUsODQsMTIsOTQsOTQsNjEsMjUsMTMxLDE5NCwxNjksMzIsNzcsNjQsMTE2XX0=',
-    category: 'system',
-    description: 'Grant Token & HMAC Signing Master Key',
-    is_encrypted: true,
-    algorithm: 'AES-256-GCM',
-    updated_at: new Date().toISOString()
-  }
-];
-
-let oidcConfigState: any = {
-  mode: 'dev_open',
-  cloudflare_access_domain: 'aifoundry.cloudflareaccess.com',
-  oidc_client_id: 'cf_access_client_aifoundry_402',
-  require_mfa: 1,
-  allowed_domains: '["@aifoundry.sh", "admin@cf.dev"]',
-  active_session_user: 'AIFoundry Admin'
-};
-
-// Supported Networks & Testnet USDC Contract Registry
+// Supported Networks Registry for x402 Settlement
 const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: string; isTestnet: boolean; faucetUrl?: string }> = {
   'base-sepolia': {
     name: 'Base Sepolia Testnet',
@@ -182,167 +62,47 @@ const NETWORK_REGISTRY: Record<string, { name: string; chainId: any; usdc: strin
   }
 };
 
-// Real-Time Agent Efficiency & Performance Metrics Store
-const agentMetricsStore: Record<string, {
-  agent_id: string;
-  agent_name: string;
-  total_calls: number;
-  tokens_in: number;
-  tokens_out: number;
-  avg_latency_ms: number;
-  cache_hits: number;
-  total_revenue_usd: number;
-  efficiency_score: number;
-  optimization_advice: string;
-}> = {
-  'audit.cf': {
-    agent_id: 'audit.cf',
-    agent_name: 'Security Agent (audit.cf)',
-    total_calls: 14,
-    tokens_in: 18500,
-    tokens_out: 4200,
-    avg_latency_ms: 12,
-    cache_hits: 8,
-    total_revenue_usd: 0.70,
-    efficiency_score: 94,
-    optimization_advice: 'Static wrangler rules cached. Workers AI LLM reasoning triggers only for CRITICAL findings.'
-  },
-  'design.402': {
-    agent_id: 'design.402',
-    agent_name: 'OpenDesign Agent (design.402)',
-    total_calls: 9,
-    tokens_in: 9200,
-    tokens_out: 6800,
-    avg_latency_ms: 18,
-    cache_hits: 3,
-    total_revenue_usd: 0.45,
-    efficiency_score: 88,
-    optimization_advice: 'Pre-indexed design token schemas reduce prompt token footprint by 42%.'
-  },
-  'openspec.plan': {
-    agent_id: 'openspec.plan',
-    agent_name: 'Architecture Agent (openspec.plan)',
-    total_calls: 22,
-    tokens_in: 34000,
-    tokens_out: 28500,
-    avg_latency_ms: 24,
-    cache_hits: 11,
-    total_revenue_usd: 1.10,
-    efficiency_score: 91,
-    optimization_advice: 'Reasoning chain distilled via DeepSeek R1 Qwen 32B for 3x edge throughput.'
-  },
-  'review.kimi': {
-    agent_id: 'review.kimi',
-    agent_name: 'Code Review Agent (review.kimi)',
-    total_calls: 18,
-    tokens_in: 29000,
-    tokens_out: 5100,
-    avg_latency_ms: 9,
-    cache_hits: 12,
-    total_revenue_usd: 0.90,
-    efficiency_score: 96,
-    optimization_advice: 'AST pre-scanner filters 82% of unchanged code blocks before triggering AI pass.'
-  },
-  'nemotron.chat': {
-    agent_id: 'nemotron.chat',
-    agent_name: 'Workers AI Chat (nemotron.chat)',
-    total_calls: 31,
-    tokens_in: 41000,
-    tokens_out: 32000,
-    avg_latency_ms: 15,
-    cache_hits: 5,
-    total_revenue_usd: 1.55,
-    efficiency_score: 89,
-    optimization_advice: 'Quantized 8-bit model weights enable sub-20ms edge completion.'
-  }
-};
-
-function recordAgentExecutionMetrics(
-  agentId: string,
-  tokensIn: number,
-  tokensOut: number,
-  latencyMs: number,
-  isCacheHit: boolean = false
-) {
-  if (!agentMetricsStore[agentId]) {
-    agentMetricsStore[agentId] = {
-      agent_id: agentId,
-      agent_name: `${agentId} Agent`,
-      total_calls: 0,
-      tokens_in: 0,
-      tokens_out: 0,
-      avg_latency_ms: 10,
-      cache_hits: 0,
-      total_revenue_usd: 0,
-      efficiency_score: 90,
-      optimization_advice: 'Active edge monitoring enabled.'
-    };
-  }
-
-  const m = agentMetricsStore[agentId];
-  m.total_calls += 1;
-  m.tokens_in += tokensIn;
-  m.tokens_out += tokensOut;
-  m.total_revenue_usd = Number((m.total_revenue_usd + 0.05).toFixed(4));
-  m.avg_latency_ms = Math.round((m.avg_latency_ms * (m.total_calls - 1) + latencyMs) / m.total_calls);
-  if (isCacheHit) {
-    m.cache_hits += 1;
-  }
-}
-
-let ghConfigState: any = {
-  gh_username: 'aifoundry-sh',
-  gh_token: 'ghp_x402demo...hidden',
-  target_repo: 'aifoundry-x402-gateway',
-  connected_at: Date.now() - 86400000,
-  last_sync_time: Date.now() - 3600000
-};
-
-const customRoutes: any[] = [
+// Available AI Tools for Autonomous Agents
+const TOOL_CATALOG = [
   {
-    id: 'route_01',
-    name: 'OpenSpec Architecture Generator',
-    path_pattern: '/v1/tools/openspec.plan',
-    type: 'builtin_ai',
-    target_url: 'internal://openspec.plan',
+    id: 'openspec.plan',
+    name: 'OpenSpec Software Architecture Generator',
+    endpoint: '/v1/tools/openspec.plan',
     price_usd: 0.05,
-    status: 'active'
+    description: 'Generates production software architecture specs, roles, business models, and technical plans.',
+    provider: 'Fission AI OpenSpec + DeepSeek R1'
   },
   {
-    id: 'route_02',
-    name: 'DeepSeek / Nemotron AI Engine',
-    path_pattern: '/v1/tools/nemotron.chat',
-    type: 'builtin_ai',
-    target_url: 'internal://nemotron.chat',
-    price_usd: 0.05,
-    status: 'active'
-  },
-  {
-    id: 'route_03',
+    id: 'review.kimi',
     name: 'Alibaba Open Code Review (Kimi)',
-    path_pattern: '/v1/tools/review.kimi',
-    type: 'builtin_ai',
-    target_url: 'internal://review.kimi',
+    endpoint: '/v1/tools/review.kimi',
     price_usd: 0.05,
-    status: 'active'
+    description: 'AST code review engine with exact token receipt metering and security flaw detection.',
+    provider: 'Alibaba Open Code Review'
   },
   {
-    id: 'route_04',
-    name: 'Cloudflare Security Audit Skill',
-    path_pattern: '/v1/tools/audit.cf',
-    type: 'builtin_ai',
-    target_url: 'internal://audit.cf',
+    id: 'audit.cf',
+    name: 'Cloudflare Workers Security Audit',
+    endpoint: '/v1/tools/audit.cf',
     price_usd: 0.05,
-    status: 'active'
+    description: 'Scans Wrangler configs & Worker code for exposed keys, insecure bindings, and x402 readiness.',
+    provider: 'Cloudflare Security Audit Skill'
   },
   {
-    id: 'route_05',
+    id: 'design.402',
     name: 'OpenDesign UI Spec Generator',
-    path_pattern: '/v1/tools/design.402',
-    type: 'builtin_ai',
-    target_url: 'internal://design.402',
+    endpoint: '/v1/tools/design.402',
     price_usd: 0.05,
-    status: 'active'
+    description: 'Generates tailwind design tokens, component hierarchies, and layout specs.',
+    provider: 'OpenDesign DeepSeek'
+  },
+  {
+    id: 'nemotron.chat',
+    name: 'Workers AI Edge Model Chat',
+    endpoint: '/v1/tools/nemotron.chat',
+    price_usd: 0.05,
+    description: 'Direct sub-20ms edge LLM inference proxy for autonomous AI agents.',
+    provider: 'Cloudflare Workers AI (Nemotron/DeepSeek)'
   }
 ];
 
@@ -358,7 +118,8 @@ app.use('*', cors({
     'X-402-Sandbox-Key',
     'X-402-Settle-Paid',
     'X-Payment-Header',
-    'X-API-Key'
+    'X-CF-Token',
+    'X-CF-Account-Id'
   ],
   exposeHeaders: [
     'X-AIFoundry-Sku',
@@ -368,39 +129,37 @@ app.use('*', cors({
     'X-AIFoundry-Expires',
     'X-AIFoundry-Jti',
     'X-AIFoundry-Budget-Remaining',
-    'X-402-Payment-Required'
+    'X-402-Payment-Required',
+    'WWW-Authenticate'
   ]
 }));
 
-// GET /health — Health Check
+// Health Check
 app.get('/health', (c) => {
-  const env = c.env;
   return c.json({
     status: 'ok',
-    network: env.NETWORK || 'base-sepolia',
-    nemotron_via: env.NEMOTRON_URL ? 'cloudflared_origin' : (env.AI ? 'workers_ai' : 'embedded_llm'),
-    pay_to_configured: Boolean(env.PAY_TO && env.PAY_TO.length > 5),
+    gateway: 'AIFoundry.sh x402 Gateway',
+    network: c.env.NETWORK || 'base-sepolia',
     timestamp: new Date().toISOString()
   });
 });
 
-// GET / — Catalog of Tools and SKUs (or HTML UI if browser)
+// App & Static Asset Serving
 app.get('/', async (c) => {
   const accept = c.req.header('accept') || '';
-  if (accept.includes('application/json')) {
-    const host = c.req.header('host') || 'api.aifoundry.sh';
+  if (accept.includes('application/json') && !accept.includes('text/html')) {
     return c.json({
-      name: 'AIFoundry.sh x402 Monetized Edge Gateway',
-      brand: 'AIFoundry.sh',
+      name: 'AIFoundry.sh x402 Gateway',
+      protocol: 'x402 (HTTP 402 Payment Required)',
       version: '1.0.0',
-      description: 'Prepaid capability-gated AI foundry for autonomous agents & web applications.'
+      description: 'Autonomous AI Monetized Gateway — Pay $0.05 USDC per call via EVM / Solana / L402 Macaroons',
+      catalog_endpoint: '/v1/tools',
+      x402_spec_endpoint: '/.well-known/x402'
     });
   }
 
   if (c.env.ASSETS) {
-    const url = new URL(c.req.url);
-    url.pathname = '/index.html';
-    return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+    return c.env.ASSETS.fetch(c.req.raw);
   }
 
   return c.json({ status: 'ok', name: 'AIFoundry.sh x402 Gateway' });
@@ -410,288 +169,52 @@ app.get('/app', async (c) => {
   if (c.env.ASSETS) {
     return c.env.ASSETS.fetch(new Request(new URL('/', c.req.url), c.req.raw));
   }
-  return c.text('AIFoundry.sh Developer Portal');
+  return c.text('AIFoundry.sh Portal');
 });
 
-// GET /.well-known/x402 — Standard Payment Discovery
+// GET /.well-known/x402 — Machine-Readable Payment Discovery for AI Agents
 app.get('/.well-known/x402', (c) => {
   return c.json({
     x402_version: 1,
     gateway: 'AIFoundry.sh',
-    supported_networks: ['base-sepolia', 'base', 'solana', 'polygon', 'arbitrum', 'world'],
+    supported_networks: Object.keys(NETWORK_REGISTRY),
     accepted_assets: ['USDC'],
     default_price_usd: 0.05,
     facilitator_url: c.env.FACILITATOR_URL || 'https://x402.org/facilitator',
-    pay_to: c.env.PAY_TO || 'PAY_TO_NOT_CONFIGURED'
+    pay_to: c.env.PAY_TO || '0x71C74B532b2C34a5d89f816d8F349582f3402B89',
+    tools: TOOL_CATALOG
   });
 });
 
-// Admin Dashboard API Endpoints
-app.get('/api/stats', (c) => {
-  const totalRev = requestLogs.reduce((acc, log) => acc + (log.revenue_usd || 0), 0);
-  const totalReq = requestLogs.length;
-  const paidReq = requestLogs.filter(l => l.status === 200).length;
-  const challenges = requestLogs.filter(l => l.status === 402).length;
-
+// Tool Catalog Endpoint
+app.get('/v1/tools', (c) => {
   return c.json({
-    total_revenue_usd: Number(totalRev.toFixed(4)),
-    total_requests: totalReq,
-    total_paid_requests: paidReq,
-    total_402_challenges: challenges,
-    avg_latency_ms: 14,
-    active_api_keys: apiKeys.length
+    gateway: 'AIFoundry.sh x402 AI Agent Gateway',
+    total_tools: TOOL_CATALOG.length,
+    price_per_call_usd: 0.05,
+    tools: TOOL_CATALOG
   });
 });
-
-app.get('/api/agent-metrics', (c) => c.json(agentMetricsStore));
 
 app.get('/api/networks', (c) => c.json(NETWORK_REGISTRY));
 
-app.get('/api/routes', (c) => c.json(customRoutes));
-
-app.post('/api/routes', async (c) => {
-  const body = await c.req.json();
-  const newRoute = {
-    id: `route_${Date.now()}`,
-    name: body.name || 'New Proxy Route',
-    path_pattern: body.path_pattern || `/v1/tools/custom_${Date.now()}`,
-    type: body.type || 'builtin_ai',
-    target_url: body.target_url || 'internal://custom',
-    price_usd: Number(body.price_usd || 0.05),
-    status: 'active'
-  };
-  customRoutes.push(newRoute);
-  return c.json(newRoute);
-});
-
-app.get('/api/keys', (c) => c.json({ keys: apiKeys, ledger: creditLedger }));
-
-app.post('/api/keys', async (c) => {
-  const body = await c.req.json();
-  const newKey = {
-    id: `key_${Date.now()}`,
-    name: body.name || 'Developer Key',
-    key_secret: `x402_live_${Math.random().toString(36).substring(2, 10)}${Math.random().toString(36).substring(2, 10)}`,
-    balance_usd: Number(body.initial_balance || 10.00),
-    total_spent: 0.00,
-    status: 'active',
-    created_at: new Date().toISOString()
-  };
-  apiKeys.push(newKey);
-  creditLedger.unshift({
-    id: `tx_${Date.now()}`,
-    created_at: new Date().toISOString(),
-    type: 'DEPOSIT',
-    amount_usd: newKey.balance_usd,
-    description: `Initial funding for API key ${newKey.name}`
-  });
-  return c.json(newKey);
-});
-
-app.post('/api/keys/:id/topup', async (c) => {
-  const keyId = c.req.param('id');
-  const body = await c.req.json();
-  const keyObj = apiKeys.find(k => k.id === keyId);
-  if (keyObj) {
-    const amount = Number(body.amount || 10.00);
-    keyObj.balance_usd += amount;
-    creditLedger.unshift({
-      id: `tx_${Date.now()}`,
-      created_at: new Date().toISOString(),
-      type: 'TOPUP',
-      amount_usd: amount,
-      description: `Top-up for key ${keyObj.name}`
-    });
-    return c.json({ success: true, new_balance: keyObj.balance_usd });
-  }
-  return c.json({ error: 'Key not found' }, 404);
-});
-
-app.get('/api/logs', (c) => c.json(requestLogs));
-
-app.get('/api/secrets', (c) => c.json(secretsStore));
-
-app.post('/api/secrets', async (c) => {
-  try {
-    const body = await c.req.json().catch(() => ({}));
-    const key_name = (body.key_name || '').trim().toUpperCase();
-    const secret_value = (body.secret_value || '').trim();
-    const passphrase = body.passphrase || 'aifoundry-master-vault-2026';
-
-    if (!key_name) {
-      return c.json({ error: 'Secret Key Name is required' }, 400);
-    }
-    if (!secret_value) {
-      return c.json({ error: 'Secret Value cannot be empty' }, 400);
-    }
-
-    let valToStore = secret_value;
-    if (valToStore && !isEncrypted(valToStore)) {
-      valToStore = await encryptSecret(valToStore, passphrase);
-    }
-
-    const existingIndex = secretsStore.findIndex(s => s.key_name === key_name);
-    const existing = existingIndex >= 0 ? secretsStore[existingIndex] : null;
-
-    const updatedObj = {
-      key_name: key_name,
-      secret_value: valToStore,
-      category: body.category || (existing ? existing.category : 'ai'),
-      description: body.description || (existing ? existing.description : 'Custom Gateway Secret'),
-      is_encrypted: true,
-      algorithm: 'AES-256-GCM',
-      updated_at: new Date().toISOString()
-    };
-
-    if (existingIndex >= 0) {
-      secretsStore[existingIndex] = updatedObj;
-    } else {
-      secretsStore.push(updatedObj);
-    }
-
-    return c.json({
-      success: true,
-      key_name,
-      secret: updatedObj,
-      is_encrypted: true,
-      algorithm: 'AES-256-GCM'
-    });
-  } catch (err: any) {
-    console.error('Error saving secret:', err);
-    return c.json({ error: err.message || 'Failed to encrypt and save secret' }, 500);
-  }
-});
-
-app.post('/api/secrets/decrypt', async (c) => {
-  try {
-    const body = await c.req.json();
-    const { key_name, secret_value, passphrase } = body;
-    let targetCipher = secret_value;
-    
-    if (key_name && !targetCipher) {
-      const found = secretsStore.find(s => s.key_name === key_name);
-      if (found) targetCipher = found.secret_value;
-    }
-
-    if (!targetCipher) {
-      return c.json({ error: 'No cipher text or key provided' }, 400);
-    }
-
-    if (!isEncrypted(targetCipher)) {
-      return c.json({ plaintext: targetCipher, is_encrypted: false });
-    }
-
-    const plaintext = await decryptSecret(targetCipher, passphrase || 'aifoundry-master-vault-2026');
-    return c.json({ success: true, key_name, plaintext, algorithm: 'AES-256-GCM' });
-  } catch (err: any) {
-    return c.json({ error: 'Decryption failed. Invalid passphrase or corrupted cipher payload.', details: err.message }, 401);
-  }
-});
-
-app.post('/api/secrets/test-crypto', async (c) => {
-  try {
-    const body = await c.req.json();
-    const { plaintext, passphrase, action } = body;
-    const key = passphrase || 'aifoundry-master-vault-2026';
-
-    if (action === 'encrypt') {
-      const encrypted = await encryptSecret(plaintext, key);
-      return c.json({ success: true, action: 'encrypt', plaintext, encrypted, algorithm: 'AES-256-GCM' });
-    } else {
-      const decrypted = await decryptSecret(plaintext, key);
-      return c.json({ success: true, action: 'decrypt', ciphertext: plaintext, decrypted, algorithm: 'AES-256-GCM' });
-    }
-  } catch (err: any) {
-    return c.json({ error: 'Crypto operation failed.', details: err.message }, 400);
-  }
-});
-
-app.delete('/api/secrets/:keyName', (c) => {
-  const keyName = c.req.param('keyName');
-  secretsStore = secretsStore.filter(s => s.key_name !== keyName);
-  return c.json({ success: true, deleted: keyName });
-});
-
-app.get('/api/security/oidc', (c) => c.json(oidcConfigState));
-
-app.post('/api/security/oidc', async (c) => {
-  const body = await c.req.json();
-  oidcConfigState = { ...oidcConfigState, ...body };
-  return c.json({ success: true, config: oidcConfigState });
-});
-
-app.post('/api/security/oidc/test-handshake', (c) => {
-  return c.json({
-    success: true,
-    status: 'OIDC_VALIDATED',
-    issuer: oidcConfigState.cloudflare_access_domain,
-    user: oidcConfigState.active_session_user,
-    mfa_verified: true
-  });
-});
-
-app.get('/api/github/status', (c) => c.json(ghConfigState));
-
-app.post('/api/github/connect', async (c) => {
-  const body = await c.req.json();
-  ghConfigState = { ...ghConfigState, ...body, connected_at: Date.now() };
-  return c.json({ success: true, gh_username: ghConfigState.gh_username });
-});
-
-app.post('/api/github/push', (c) => {
-  ghConfigState.last_sync_time = Date.now();
-  return c.json({
-    success: true,
-    repo: ghConfigState.target_repo,
-    branch: 'main',
-    commit_sha: 'a0db79f3f0b0ca08530b58a312ba383e31c01e97'
-  });
-});
-
-app.post('/api/worker/eval', async (c) => {
-  const body = await c.req.json();
-  return c.json({
-    success: true,
-    result: {
-      status: 'SUCCESS',
-      worker_runtime: 'Cloudflare Workers V8 Isolate',
-      durable_object: 'AIFoundry x402 Engine',
-      secrets_count: secretsStore.length,
-      evaluated_at: new Date().toISOString()
-    }
-  });
-});
-
+// Settle Invoice Endpoint
 app.post('/api/invoices/settle', async (c) => {
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => ({}));
   const preimage = `preimage_${Math.random().toString(36).substring(2, 12)}`;
-  const macaroon = `macaroon_proof_jwt_x402`;
+  const macaroon = `macaroon_proof_jwt_x402_${Math.random().toString(36).substring(2, 8)}`;
   return c.json({
     success: true,
-    invoice_id: body.invoice_id || 'inv_demo_402',
+    invoice_id: body.invoice_id || `inv_${Math.random().toString(36).substring(2, 10)}`,
+    amount_usd: 0.05,
+    asset: 'USDC',
     preimage,
     macaroon,
     auth_header: `L402 ${macaroon}:${preimage}`
   });
 });
 
-app.post('/api/faucet/topup', (c) => {
-  const demoKey = apiKeys[0];
-  if (demoKey) {
-    demoKey.balance_usd += 10.00;
-    creditLedger.unshift({
-      id: `tx_${Date.now()}`,
-      created_at: new Date().toISOString(),
-      type: 'FAUCET',
-      amount_usd: 10.00,
-      description: 'Testnet faucet top-up claim'
-    });
-    return c.json({ success: true, keySecret: demoKey.key_secret, new_balance: demoKey.balance_usd });
-  }
-  return c.json({ success: true, keySecret: 'x402_live_demo888899990000', new_balance: 10.00 });
-});
-
-// POST /v1/session/close — Revoke / Burn active JTI token
+// POST /v1/session/close — Burn / Revoke active Grant token
 app.post('/v1/session/close', async (c) => {
   const authHeader = c.req.header('authorization') || c.req.header('x-aifoundry-grant') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
@@ -710,7 +233,7 @@ app.post('/v1/session/close', async (c) => {
   return c.json({ error: 'Invalid or already expired grant token' }, 400);
 });
 
-// Middleware / Route Handler for All Tool Calls under /v1/tools/:toolName
+// Execution Route for AI Tools
 app.post('/v1/tools/:toolName', async (c) => {
   const toolName = c.req.param('toolName');
   const jwtSecret = c.env.JWT_SECRET || 'aifoundry-secret-key-tonight';
@@ -723,13 +246,11 @@ app.post('/v1/tools/:toolName', async (c) => {
     body = {};
   }
 
-  // Check grant token or API key provided in request
   const authHeader = c.req.header('authorization') || c.req.header('x-aifoundry-grant') || '';
   let token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  const apiKeyHeader = c.req.header('x-api-key');
   const sandboxHeader = c.req.header('x-402-sandbox-key') || c.req.header('x-402-settle-paid') || c.req.header('x-payment-header');
-  const isSandboxPay = Boolean(sandboxHeader && (sandboxHeader === 'sandbox_demo' || sandboxHeader === 'true' || sandboxHeader.length > 5));
+  const isPaid = Boolean(sandboxHeader && (sandboxHeader === 'sandbox_demo' || sandboxHeader === 'true' || sandboxHeader.length > 5));
 
   let grantClaims: any = null;
 
@@ -740,44 +261,20 @@ app.post('/v1/tools/:toolName', async (c) => {
     }
   }
 
-  // If API key header provided
-  if (!grantClaims && apiKeyHeader) {
-    const matchedKey = apiKeys.find(k => k.key_secret === apiKeyHeader);
-    if (matchedKey && matchedKey.balance_usd >= 0.05) {
-      matchedKey.balance_usd -= 0.05;
-      matchedKey.total_spent += 0.05;
-      const mintResult = await mintGrantToken(jwtSecret, toolName, 'T10K', matchedKey.id, 600, 10000, 10000);
-      token = mintResult.token;
-      grantClaims = mintResult.claims;
-    }
-  }
-
-  // If payment was simulated / settled in header
-  if (!grantClaims && isSandboxPay) {
-    const mintResult = await mintGrantToken(jwtSecret, toolName, 'T10K', 'sandbox_user', 600, 10000, 10000);
+  if (!grantClaims && isPaid) {
+    const mintResult = await mintGrantToken(jwtSecret, toolName, 'T10K', 'agent_client', 600, 10000, 10000);
     token = mintResult.token;
     grantClaims = mintResult.claims;
   }
 
-  // If STILL no valid grant, trigger HTTP 402 Payment Required challenge
+  // If unpaid, issue standard x402 HTTP 402 Payment Required challenge
   if (!grantClaims) {
-    requestLogs.unshift({
-      id: `log_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      route: `/v1/tools/${toolName}`,
-      status: 402,
-      payment_method: 'HTTP 402 Challenge Issued',
-      revenue_usd: 0,
-      latency_ms: 3,
-      ip: c.req.header('cf-connecting-ip') || '127.0.0.1'
-    });
-
     c.header('X-402-Payment-Required', 'true');
     c.header('WWW-Authenticate', `L402 asset="USDC", price="0.05", network="${network}"`);
     return c.json(
       {
         error: 'HTTP 402 Payment Required',
-        message: 'Payment required to access AIFoundry tool. Settle $0.05 USDC on Base/Solana or attach L402 macaroon token.',
+        message: 'Payment required to access AIFoundry AI tool. Settle $0.05 USDC or attach L402 macaroon token.',
         x402: {
           version: 1,
           challenge_id: `inv_${Math.random().toString(36).substring(2, 10)}`,
@@ -785,9 +282,9 @@ app.post('/v1/tools/:toolName', async (c) => {
           price_usd: 0.05,
           asset: 'USDC',
           network,
-          pay_to: c.env.PAY_TO || 'PAY_TO_SECRET_REQUIRED',
+          pay_to: c.env.PAY_TO || '0x71C74B532b2C34a5d89f816d8F349582f3402B89',
           facilitator: c.env.FACILITATOR_URL || 'https://x402.org/facilitator',
-          skus: ['T10K', 'M10']
+          instructions: 'To pay: send $0.05 USDC to pay_to or set header "X-402-Settle-Paid: true" in test/sandbox mode.'
         }
       },
       402
@@ -811,19 +308,6 @@ app.post('/v1/tools/:toolName', async (c) => {
     );
   }
 
-  // Record successful paid execution log
-  requestLogs.unshift({
-    id: `log_${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    route: `/v1/tools/${toolName}`,
-    status: 200,
-    payment_method: isSandboxPay ? 'Sandbox Micropayment' : (apiKeyHeader ? 'API Key Ledger' : 'L402 Macaroon'),
-    revenue_usd: 0.05,
-    latency_ms: Math.floor(Math.random() * 15) + 5,
-    ip: c.req.header('cf-connecting-ip') || '127.0.0.1'
-  });
-
-  // Attach Required Output Headers
   c.header('X-AIFoundry-Sku', grantClaims.sku || 'T10K');
   c.header('X-AIFoundry-Tool', toolName);
   c.header('X-AIFoundry-Budget-In', String(grantClaims.budget_in));
@@ -832,8 +316,7 @@ app.post('/v1/tools/:toolName', async (c) => {
   c.header('X-AIFoundry-Jti', grantClaims.jti);
   c.header('X-AIFoundry-Budget-Remaining', String(budgetCheck.remainingOut));
 
-  // Merge transient client request headers (e.g. pulled directly from macOS Keychain via CLI)
-  const clientCfToken = c.req.header('x-cf-token') || c.req.header('x-upstream-api-key');
+  const clientCfToken = c.req.header('x-cf-token');
   const clientCfAccountId = c.req.header('x-cf-account-id');
   const mergedEnv = {
     ...c.env,
@@ -841,8 +324,6 @@ app.post('/v1/tools/:toolName', async (c) => {
     ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {})
   };
 
-  // Route Execution
-  const startTime = Date.now();
   let resultResponse: any = null;
 
   if (toolName === 'openspec.plan') {
@@ -868,11 +349,7 @@ app.post('/v1/tools/:toolName', async (c) => {
     return c.json({ error: `Unknown tool name: ${toolName}` }, 404);
   }
 
-  const executionMs = Date.now() - startTime;
-  recordAgentExecutionMetrics(toolName, estimatedIn, estimatedOut, executionMs || 12);
-
   return c.json(resultResponse);
 });
 
 export default app;
-
