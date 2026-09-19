@@ -17,29 +17,23 @@ import {
   FileText,
   DollarSign,
   Layers,
-  Lock,
-  Unlock,
   Sparkles,
   Check,
   Bot,
-  Send,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  ArrowUpRight,
+  Activity,
+  KeyRound
 } from 'lucide-react';
 
-// 4D Cosmic Hypercube Visual Component
-const CosmicHypercube = () => {
+const CosmicLogo = () => {
   return (
-    <div className="relative w-28 h-28 mx-auto flex items-center justify-center my-2">
-      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-purple-500/20 blur-xl animate-pulse" />
-      <svg className="w-24 h-24 text-cyan-400" viewBox="0 0 100 100" fill="none">
-        <polygon points="20,20 80,20 80,80 20,80" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.8" />
-        <polygon points="35,35 65,35 65,65 35,65" stroke="#818cf8" strokeWidth="1.2" strokeOpacity="0.9" />
-        <line x1="20" y1="20" x2="35" y2="35" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
-        <line x1="80" y1="20" x2="65" y2="35" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
-        <line x1="80" y1="80" x2="65" y2="65" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
-        <line x1="20" y1="80" x2="35" y2="65" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
-      </svg>
+    <div className="relative w-10 h-10 flex items-center justify-center">
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 blur-md opacity-60 animate-pulse" />
+      <div className="relative w-10 h-10 rounded-xl bg-slate-950 border border-cyan-500/30 flex items-center justify-center shadow-inner">
+        <Bot className="w-5 h-5 text-cyan-400" />
+      </div>
     </div>
   );
 };
@@ -51,18 +45,24 @@ export function App() {
 
   // Simulator State
   const [selectedTool, setSelectedTool] = useState('openspec.plan');
-  const [payMode, setPayMode] = useState('x402_header'); // 'unpaid', 'x402_header', 'l402_token'
+  const [payMode, setPayMode] = useState('unpaid'); // 'unpaid' or 'paid'
+  const [paymentTxHash, setPaymentTxHash] = useState('tx_0x9f8a32b...usdc_paid');
   const [customPrompt, setCustomPrompt] = useState('{\n  "goal": "Build an AI monetized image generator on Cloudflare Workers"\n}');
   const [isExecuting, setIsExecuting] = useState(false);
   const [execResult, setExecResult] = useState(null);
   const [responseHeaders, setResponseHeaders] = useState(null);
 
   // SDK Code Tab State
-  const [sdkLang, setSdkLang] = useState('python'); // 'python', 'typescript', 'curl'
+  const [sdkLang, setSdkLang] = useState('python');
 
   const showToast = (msg, type = 'info') => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    showToast(`Copied ${label} to clipboard!`, 'success');
   };
 
   const handleRunTool = async () => {
@@ -82,10 +82,8 @@ export function App() {
         'Content-Type': 'application/json'
       };
 
-      if (payMode === 'x402_header') {
-        headers['X-402-Settle-Paid'] = 'true';
-      } else if (payMode === 'l402_token') {
-        headers['Authorization'] = 'Bearer l402_macaroon_jwt_demo_grant';
+      if (payMode === 'paid') {
+        headers['X-402-Payment'] = paymentTxHash || 'tx_0x_settled_usdc';
       }
 
       const res = await fetch(`/v1/tools/${selectedTool}`, {
@@ -110,7 +108,7 @@ export function App() {
       if (res.status === 200) {
         showToast(`200 OK — Paid $0.05 USDC & Executed ${selectedTool}`, 'success');
       } else if (res.status === 402) {
-        showToast('HTTP 402 Payment Required Challenge Issued by x402 Gateway', 'warning');
+        showToast('HTTP 402 Payment Required: AI agent challenge generated', 'warning');
       } else {
         showToast(`HTTP ${res.status} returned from edge`, 'error');
       }
@@ -121,492 +119,503 @@ export function App() {
     }
   };
 
-  const handleCopy = (text, label) => {
-    navigator.clipboard.writeText(text);
-    showToast(`Copied ${label} to clipboard!`, 'success');
+  const toolDetails = {
+    'openspec.plan': {
+      title: 'OpenSpec Software Architecture',
+      price: '$0.05 USDC',
+      desc: 'Generates software dev plans, tech stacks, and team persona architectures.',
+      provider: 'Fission AI OpenSpec + DeepSeek R1'
+    },
+    'review.kimi': {
+      title: 'Alibaba Open Code Review',
+      price: '$0.05 USDC',
+      desc: 'AST code review with exact token receipt metering and security checks.',
+      provider: 'Alibaba Open Code Review'
+    },
+    'audit.cf': {
+      title: 'Cloudflare Workers Security Audit',
+      price: '$0.05 USDC',
+      desc: 'Scans Wrangler configs & Worker code for exposed keys and x402 compliance.',
+      provider: 'Cloudflare Security Audit Skill'
+    },
+    'design.402': {
+      title: 'OpenDesign UI Spec Generator',
+      price: '$0.05 USDC',
+      desc: 'Generates tailwind design tokens, component trees, and layout specs.',
+      provider: 'OpenDesign DeepSeek'
+    },
+    'nemotron.chat': {
+      title: 'Workers AI Edge Model Chat',
+      price: '$0.05 USDC',
+      desc: 'Sub-20ms direct edge LLM inference for autonomous AI agent pipelines.',
+      provider: 'Cloudflare Workers AI'
+    }
   };
 
   return (
-    <div className="min-h-screen bg-cosmic-950 text-gray-100 font-sans selection:bg-cyan-500 selection:text-black">
-      
-      {/* Toast Banner */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-black">
+      {/* Toast Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce ${
-          notification.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-300' :
-          notification.type === 'warning' ? 'bg-amber-950/90 border-amber-500/40 text-amber-300' :
-          notification.type === 'error' ? 'bg-rose-950/90 border-rose-500/40 text-rose-300' :
-          'bg-indigo-950/90 border-indigo-500/40 text-cyan-300'
-        }`}>
-          {notification.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-          {notification.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-400" />}
-          {notification.type === 'error' && <XCircle className="w-4 h-4 text-rose-400" />}
-          <span>{notification.msg}</span>
+        <div
+          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-xl transition-all duration-300 ${
+            notification.type === 'success'
+              ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
+              : notification.type === 'warning'
+              ? 'bg-amber-950/90 border-amber-500/50 text-amber-200'
+              : notification.type === 'error'
+              ? 'bg-rose-950/90 border-rose-500/50 text-rose-200'
+              : 'bg-slate-900/90 border-cyan-500/50 text-cyan-200'
+          }`}
+        >
+          {notification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
+          {notification.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />}
+          {notification.type === 'error' && <XCircle className="w-5 h-5 text-rose-400 shrink-0" />}
+          {notification.type === 'info' && <Zap className="w-5 h-5 text-cyan-400 shrink-0" />}
+          <span className="text-sm font-medium">{notification.msg}</span>
         </div>
       )}
 
-      {/* Main Top Header */}
-      <header className="border-b border-indigo-500/20 bg-cosmic-900/90 backdrop-blur-md sticky top-0 z-40">
+      {/* Header Bar */}
+      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20">
-              <div className="w-full h-full bg-cosmic-950 rounded-[10px] flex items-center justify-center">
-                <Bot className="w-5 h-5 text-cyan-400" />
-              </div>
-            </div>
+            <CosmicLogo />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base tracking-tight text-white cyan-text-glow">AIFoundry.sh</span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-mono font-semibold text-indigo-300">
-                  x402 AI Agent Gateway
+                <span className="font-bold text-lg bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                  AIFoundry.sh
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                  x402 Protocol
                 </span>
               </div>
-              <p className="text-[10px] text-gray-400 font-mono">Autonomous Pay-Per-Call AI Tools on Cloudflare Edge</p>
+              <p className="text-xs text-slate-400">Direct Pay-Per-Call AI Gateway for Autonomous AI Agents</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Network Selector */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cosmic-850 border border-indigo-500/30 text-xs">
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <select
-                value={selectedNetwork}
-                onChange={(e) => setSelectedNetwork(e.target.value)}
-                className="bg-transparent text-gray-200 font-mono text-xs focus:outline-none cursor-pointer"
-              >
-                <option value="base-sepolia" className="bg-cosmic-900">Base Sepolia (84532)</option>
-                <option value="solana-devnet" className="bg-cosmic-900">Solana Devnet</option>
-                <option value="polygon-amoy" className="bg-cosmic-900">Polygon Amoy (80002)</option>
-                <option value="arbitrum-sepolia" className="bg-cosmic-900">Arbitrum Sepolia (421614)</option>
-                <option value="base" className="bg-cosmic-900">Base Mainnet (8453)</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => showToast('Simulated $10 USDC Testnet Faucet Credit Added!', 'success')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-300 font-semibold text-xs hover:bg-emerald-500/30 transition-all shadow-md"
-            >
-              <Coins className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Faucet $10</span>
-            </button>
+          {/* Target Wallet / Pay-To info */}
+          <div className="hidden md:flex items-center gap-4 text-xs font-mono bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-1.5">
+            <span className="text-slate-400">Gateway Pay-To:</span>
+            <span className="text-cyan-300 font-semibold">0x71C7...2B89</span>
+            <span className="text-slate-500">|</span>
+            <span className="text-emerald-400 font-semibold">$0.05 USDC / call</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
-        
-        {/* Navigation Sidebar */}
-        <aside className="w-full md:w-64 bg-cosmic-900/80 border border-indigo-500/20 p-4 rounded-3xl space-y-6">
-          <div className="p-3 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-center space-y-1">
-            <CosmicHypercube />
-            <div className="text-[11px] font-bold text-cyan-300 font-mono">x402 Payment Standard</div>
-            <div className="text-[10px] text-emerald-400 font-mono flex items-center justify-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>HTTP 402 Active</span>
+      {/* Hero Banner */}
+      <div className="border-b border-slate-800 bg-gradient-to-b from-cyan-950/20 via-slate-950 to-slate-950 py-8 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/50 text-cyan-300 text-xs mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>No API keys. No subscriptions. Pay-per-call for AI Agents.</span>
             </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Pay-Per-Call AI Edge Gateway for Autonomous Agents
+            </h1>
+            <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+              When an AI agent requests a tool without payment, the gateway responds with an <code className="text-cyan-300 font-mono">HTTP 402 Payment Required</code> challenge with exact pricing and recipient address. Once the payment proof is included, execution runs instantly.
+            </p>
           </div>
 
-          <nav className="space-y-1">
+          <div className="flex flex-wrap gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('simulator')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
                 activeTab === 'simulator'
-                  ? 'glass-panel-glow text-cyan-300 border-cyan-400/40 shadow-lg shadow-cyan-500/10'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Play className="w-4 h-4 text-cyan-400" />
-              <span>Interactive x402 Simulator</span>
+              <Play className="w-4 h-4" />
+              Live AI Simulator
             </button>
-
             <button
               onClick={() => setActiveTab('catalog')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
                 activeTab === 'catalog'
-                  ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Layers className="w-4 h-4 text-purple-400" />
-              <span>AI Tools Catalog ($0.05/call)</span>
+              <Cpu className="w-4 h-4" />
+              Tool Catalog ($0.05)
             </button>
-
             <button
               onClick={() => setActiveTab('sdks')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
                 activeTab === 'sdks'
-                  ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Code2 className="w-4 h-4 text-emerald-400" />
-              <span>Agent SDKs & Code Snippets</span>
+              <Code2 className="w-4 h-4" />
+              AI Agent Integration Code
             </button>
-
-            <button
-              onClick={() => setActiveTab('x402spec')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                activeTab === 'x402spec'
-                  ? 'glass-panel-glow text-indigo-300 border-indigo-400/40 shadow-lg'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-cosmic-850'
-              }`}
-            >
-              <FileText className="w-4 h-4 text-amber-400" />
-              <span>x402 Protocol Discovery</span>
-            </button>
-          </nav>
-
-          <div className="p-3 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 text-[11px] text-gray-300 font-mono space-y-1">
-            <span className="text-cyan-300 font-bold">Pay-To Address:</span>
-            <div className="text-[10px] text-gray-400 truncate">0x71C74B532b2C34a5d89f816d8F349582f3402B89</div>
-            <div className="text-[10px] text-emerald-400 pt-1">USDC Base/Solana Accepted</div>
           </div>
-        </aside>
+        </div>
+      </div>
 
-        {/* Main Panel Content */}
-        <main className="flex-1 space-y-6">
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* TAB 1: LIVE SIMULATOR */}
+        {activeTab === 'simulator' && (
+          <div className="space-y-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left Column: Request Configuration */}
+              <div className="lg:w-1/2 bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-cyan-400" />
+                    <h2 className="font-semibold text-sm text-slate-200">AI Agent Request Simulator</h2>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">POST /v1/tools/{selectedTool}</span>
+                </div>
 
-          {/* TAB 1: INTERACTIVE x402 SIMULATOR */}
-          {activeTab === 'simulator' && (
-            <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-500/20 pb-4">
+                {/* Tool Selector */}
                 <div>
-                  <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
-                    <Play className="w-5 h-5 text-cyan-400" />
-                    How an Autonomous AI Pays & Consumes Services
-                  </h2>
-                  <p className="text-xs text-gray-400 font-mono">Simulate real-time HTTP 402 payment negotiation and instant AI execution</p>
-                </div>
-                <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
-                  $0.05 USDC / call
-                </div>
-              </div>
-
-              {/* Step 1 & 2 Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-300 font-mono flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-cyan-500 text-black text-[10px] font-extrabold flex items-center justify-center">1</span>
-                    Select AI Micro-Tool:
-                  </label>
-                  <select
-                    value={selectedTool}
-                    onChange={(e) => setSelectedTool(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs text-gray-200 font-mono focus:outline-none focus:border-cyan-400"
-                  >
-                    <option value="openspec.plan">OpenSpec Software Architecture Generator (`openspec.plan`)</option>
-                    <option value="review.kimi">Alibaba Open Code Review (`review.kimi`)</option>
-                    <option value="audit.cf">Cloudflare Security Audit (`audit.cf`)</option>
-                    <option value="design.402">OpenDesign UI Spec Generator (`design.402`)</option>
-                    <option value="nemotron.chat">Workers AI Edge Chat (`nemotron.chat`)</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Select Target AI Tool ($0.05 USDC)</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {Object.entries(toolDetails).map(([key, item]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedTool(key)}
+                        className={`p-3 rounded-lg border text-left text-xs transition-all ${
+                          selectedTool === key
+                            ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-200'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="font-semibold text-slate-200">{item.title}</div>
+                        <div className="text-[11px] text-cyan-400 font-mono mt-0.5">{item.price}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-300 font-mono flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-cyan-500 text-black text-[10px] font-extrabold flex items-center justify-center">2</span>
-                    Payment / Settlement Mode:
-                  </label>
-                  <select
-                    value={payMode}
-                    onChange={(e) => setPayMode(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-cosmic-950 border border-indigo-500/30 text-xs text-gray-200 font-mono focus:outline-none focus:border-cyan-400"
-                  >
-                    <option value="unpaid">Unpaid / No Header (Triggers HTTP 402 Challenge)</option>
-                    <option value="x402_header">x402 Micropayment Header (X-402-Settle-Paid: true)</option>
-                    <option value="l402_token">L402 Macaroon Token (Authorization: Bearer l402_...)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* JSON Prompt Input */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-300 font-mono flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-cyan-500 text-black text-[10px] font-extrabold flex items-center justify-center">3</span>
-                  JSON Payload / Goal Prompt:
-                </label>
-                <textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  rows={5}
-                  className="w-full p-3 rounded-2xl bg-cosmic-950 border border-indigo-500/30 text-xs font-mono text-gray-200 focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              {/* Trigger Button */}
-              <button
-                onClick={handleRunTool}
-                disabled={isExecuting}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 font-bold text-xs text-white shadow-xl shadow-cyan-500/20 hover:opacity-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isExecuting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                <span>Send Request to Gateway Endpoint (`/v1/tools/{selectedTool}`)</span>
-              </button>
-
-              {/* Response Display */}
-              {execResult && (
-                <div className="space-y-4 animate-fadeIn">
-                  <div className="p-4 rounded-2xl bg-cosmic-950 border border-indigo-500/30 space-y-3">
-                    <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
-                      <div className="flex items-center gap-2 font-mono text-xs">
-                        <span className="text-gray-400">Response Code:</span>
-                        <span className={`px-2.5 py-0.5 rounded-md font-bold ${
-                          execResult.status === 200 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                          execResult.status === 402 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                          'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        }`}>
-                          HTTP {execResult.status} {execResult.status === 200 ? 'OK (PAID & GRANTED)' : execResult.status === 402 ? 'PAYMENT REQUIRED' : 'ERROR'}
-                        </span>
+                {/* Payment Mode Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-2">Payment Header State</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPayMode('unpaid')}
+                      className={`p-3 rounded-lg border text-left text-xs transition-all ${
+                        payMode === 'unpaid'
+                          ? 'bg-rose-950/50 border-rose-500/60 text-rose-200'
+                          : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-rose-300">
+                        <XCircle className="w-4 h-4 text-rose-400" />
+                        No Payment Header
                       </div>
-                    </div>
+                      <p className="text-[11px] text-slate-400 mt-1">Triggers HTTP 402 Payment Required challenge</p>
+                    </button>
 
-                    {/* Headers Inspector */}
+                    <button
+                      onClick={() => setPayMode('paid')}
+                      className={`p-3 rounded-lg border text-left text-xs transition-all ${
+                        payMode === 'paid'
+                          ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-200'
+                          : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-emerald-300">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        X-402-Payment Header Included
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">Sends payment proof — executes tool instantly</p>
+                    </button>
+                  </div>
+                </div>
+
+                {payMode === 'paid' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">X-402-Payment Header Value</label>
+                    <input
+                      type="text"
+                      value={paymentTxHash}
+                      onChange={(e) => setPaymentTxHash(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                )}
+
+                {/* Prompt JSON */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">JSON Request Body</label>
+                  <textarea
+                    rows={4}
+                    value={customPrompt}
+                    onChange={(e) => setCustomPrompt(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                {/* Execute Button */}
+                <button
+                  onClick={handleRunTool}
+                  disabled={isExecuting}
+                  className={`w-full py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                    isExecuting
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  }`}
+                >
+                  {isExecuting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Communicating with Edge Gateway...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4" />
+                      Send AI Request ({payMode === 'unpaid' ? 'Test 402 Challenge' : 'Test Paid Request'})
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Right Column: Gateway Response Inspector */}
+              <div className="lg:w-1/2 bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-5 h-5 text-indigo-400" />
+                    <h2 className="font-semibold text-sm text-slate-200">Gateway Response Inspector</h2>
+                  </div>
+                  {execResult && (
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-mono font-bold ${
+                        execResult.status === 200
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                          : execResult.status === 402
+                          ? 'bg-amber-950 text-amber-400 border border-amber-500/30'
+                          : 'bg-rose-950 text-rose-400 border border-rose-500/30'
+                      }`}
+                    >
+                      HTTP {execResult.status} {execResult.statusText}
+                    </span>
+                  )}
+                </div>
+
+                {!execResult && (
+                  <div className="h-80 border border-dashed border-slate-800 rounded-lg flex flex-col items-center justify-center text-slate-500 text-xs p-6 text-center">
+                    <Bot className="w-10 h-10 mb-3 opacity-30 text-cyan-400" />
+                    <p className="font-semibold text-slate-400 mb-1">No request sent yet</p>
+                    <p className="text-slate-500 max-w-xs">
+                      Click <strong>"Send AI Request"</strong> to test how the x402 Gateway returns 402 challenges to unpaid AI agents vs. executing tool workloads for paid requests.
+                    </p>
+                  </div>
+                )}
+
+                {execResult && (
+                  <div className="space-y-4">
+                    {/* HTTP Headers */}
                     {responseHeaders && (
-                      <div className="space-y-1">
-                        <span className="text-[11px] font-bold text-indigo-300 font-mono">x402 Protocol Headers:</span>
-                        <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-[11px] font-mono text-gray-300 space-y-1 overflow-x-auto">
+                      <div>
+                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                          Response Headers Exposed to AI Agent
+                        </div>
+                        <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-cyan-300 space-y-1 overflow-x-auto">
                           {Object.entries(responseHeaders).map(([k, v]) => (
                             <div key={k} className="flex gap-2">
-                              <span className="text-cyan-400">{k}:</span>
-                              <span className="text-emerald-300">{v}</span>
+                              <span className="text-slate-500">{k}:</span>
+                              <span className="text-slate-200 font-semibold">{v}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* JSON Output Body */}
-                    <div className="space-y-1">
-                      <span className="text-[11px] font-bold text-gray-300 font-mono">JSON Body Payload:</span>
-                      <pre className="p-3 rounded-xl bg-black/80 border border-white/10 text-xs font-mono text-cyan-300 overflow-x-auto max-h-[300px]">
+                    {/* Response JSON Body */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                          Response Payload (JSON)
+                        </span>
+                        <button
+                          onClick={() => copyToClipboard(JSON.stringify(execResult.data, null, 2), 'JSON response')}
+                          className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Copy JSON
+                        </button>
+                      </div>
+                      <pre className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto max-h-80 scrollbar-thin">
                         {JSON.stringify(execResult.data, null, 2)}
                       </pre>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 2: AI TOOLS CATALOG */}
-          {activeTab === 'catalog' && (
-            <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
-              <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
-                    <Layers className="w-5 h-5 text-purple-400" />
-                    Monetized AI Tool Catalog ($0.05 USDC / call)
-                  </h2>
-                  <p className="text-xs text-gray-400 font-mono">Capability-gated micro-services available to autonomous agents</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-cyan-300 font-mono">`openspec.plan`</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">$0.05 USDC</span>
-                  </div>
-                  <p className="text-xs text-gray-300">Software Architecture Generator via Fission AI OpenSpec & DeepSeek R1 reasoning chain.</p>
-                  <div className="text-[10px] text-gray-500 font-mono">Provider: Fission AI + Workers AI</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-cyan-300 font-mono">`review.kimi`</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">$0.05 USDC</span>
-                  </div>
-                  <p className="text-xs text-gray-300">Alibaba Open Code Review engine with AST pre-screening and exact token receipt meter.</p>
-                  <div className="text-[10px] text-gray-500 font-mono">Provider: Alibaba Open Code Review</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-cyan-300 font-mono">`audit.cf`</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">$0.05 USDC</span>
-                  </div>
-                  <p className="text-xs text-gray-300">Scans Wrangler configs and Worker code for exposed secret keys and insecure bindings.</p>
-                  <div className="text-[10px] text-gray-500 font-mono">Provider: Cloudflare Security Audit Skill</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-cyan-300 font-mono">`design.402`</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">$0.05 USDC</span>
-                  </div>
-                  <p className="text-xs text-gray-300">Generates tailwind design tokens, layout specs, and UI component hierarchies.</p>
-                  <div className="text-[10px] text-gray-500 font-mono">Provider: OpenDesign DeepSeek</div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-cosmic-900 border border-indigo-500/30 space-y-2 md:col-span-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-cyan-300 font-mono">`nemotron.chat`</span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">$0.05 USDC</span>
-                  </div>
-                  <p className="text-xs text-gray-300">Sub-20ms edge LLM chat completion proxy directly on Cloudflare Workers AI.</p>
-                  <div className="text-[10px] text-gray-500 font-mono">Provider: Cloudflare Workers AI</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: AGENT SDKs */}
-          {activeTab === 'sdks' && (
-            <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
-              <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
-                    <Code2 className="w-5 h-5 text-emerald-400" />
-                    AI Agent Integration Code Snippets
-                  </h2>
-                  <p className="text-xs text-gray-400 font-mono">Drop into Python, TypeScript, LangChain, or ElizaOS in 1 line of code</p>
-                </div>
-
-                <div className="flex p-1 rounded-xl bg-cosmic-850 border border-indigo-500/30 text-xs">
-                  <button
-                    onClick={() => setSdkLang('python')}
-                    className={`px-3 py-1 rounded-lg transition-all font-mono font-bold ${
-                      sdkLang === 'python' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    Python
-                  </button>
-                  <button
-                    onClick={() => setSdkLang('typescript')}
-                    className={`px-3 py-1 rounded-lg transition-all font-mono font-bold ${
-                      sdkLang === 'typescript' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    TypeScript
-                  </button>
-                  <button
-                    onClick={() => setSdkLang('curl')}
-                    className={`px-3 py-1 rounded-lg transition-all font-mono font-bold ${
-                      sdkLang === 'curl' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    cURL
-                  </button>
-                </div>
-              </div>
-
-              {/* Code Panel */}
-              <div className="relative p-4 rounded-2xl bg-black/80 border border-white/10 font-mono text-xs text-cyan-300 overflow-x-auto">
-                <button
-                  onClick={() => handleCopy(
-                    sdkLang === 'python' ? `import requests\n\n# 1. Call x402 AI Gateway tool\nurl = "https://gateway.aifoundry.sh/v1/tools/openspec.plan"\nheaders = {"X-402-Settle-Paid": "true"}\npayload = {"goal": "Build an AI vision proxy"}\n\nresponse = requests.post(url, json=payload, headers=headers)\nprint(response.json())` :
-                    sdkLang === 'typescript' ? `// TypeScript / Node.js AI Agent Call\nconst res = await fetch('https://gateway.aifoundry.sh/v1/tools/review.kimi', {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'X-402-Settle-Paid': 'true'\n  },\n  body: JSON.stringify({ code: 'const x = 10;' })\n});\nconst data = await res.json();\nconsole.log(data);` :
-                    `curl -X POST "https://gateway.aifoundry.sh/v1/tools/audit.cf" \\\n  -H "Content-Type: application/json" \\\n  -H "X-402-Settle-Paid: true" \\\n  -d '{"wrangler_config": "{\"name\": \"my-worker\"}"}'`,
-                    'SDK Code'
-                  )}
-                  className="absolute top-3 right-3 p-2 rounded-xl bg-cosmic-850 hover:bg-cosmic-800 border border-indigo-500/30 text-gray-300 hover:text-white text-[11px] flex items-center gap-1"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copy</span>
-                </button>
-
-                {sdkLang === 'python' && (
-                  <pre className="whitespace-pre">{`import requests
-
-# 1. Autonomous AI Agent calls x402 Tool Endpoint
-url = "https://gateway.aifoundry.sh/v1/tools/openspec.plan"
-headers = {
-    "X-402-Settle-Paid": "true", # Or attach L402 Macaroon Header
-    "Content-Type": "application/json"
-}
-payload = {
-    "goal": "Build a x402 AI edge gateway on Cloudflare Workers"
-}
-
-res = requests.post(url, json=payload, headers=headers)
-
-if res.status_code == 200:
-    print("AI Tool Result:", res.json())
-elif res.status_code == 402:
-    challenge = res.json()["x402"]
-    print(f"Payment Required: Settle {challenge['price_usd']} USDC on {challenge['network']}")`}</pre>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
 
-                {sdkLang === 'typescript' && (
-                  <pre className="whitespace-pre">{`// TypeScript / Node.js AI Agent (ElizaOS / LangChain)
-import fetch from 'node-fetch';
+        {/* TAB 2: TOOL CATALOG */}
+        {activeTab === 'catalog' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-lg font-bold text-slate-100">Monetized AI Tool Catalog</h2>
+              <p className="text-xs text-slate-400 mt-1">All tools are priced at $0.05 USDC per execution and served via Cloudflare Workers edge nodes.</p>
+            </div>
 
-async function executeX402Tool(toolName: string, promptPayload: object) {
-  const url = \`https://gateway.aifoundry.sh/v1/tools/\${toolName}\`;
-  
-  const response = await fetch(url, {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(toolDetails).map(([key, item]) => (
+                <div key={key} className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-cyan-500/50 transition-all flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-bold text-sm text-slate-100">{item.title}</h3>
+                      <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                        {item.price}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+                    <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                      <span>Provider:</span>
+                      <span className="text-slate-300">{item.provider}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                    <span className="text-xs font-mono text-slate-400">/v1/tools/{key}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedTool(key);
+                        setActiveTab('simulator');
+                      }}
+                      className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
+                    >
+                      Test in Simulator <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: INTEGRATION CODE FOR AI AGENTS */}
+        {activeTab === 'sdks' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-lg font-bold text-slate-100">How an AI Agent Integrates with x402</h2>
+              <p className="text-xs text-slate-400 mt-1">Autonomous AI agents make requests, handle `402 Payment Required` challenges automatically, and attach payment proofs.</p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSdkLang('python')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium font-mono ${
+                  sdkLang === 'python' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 border border-slate-800'
+                }`}
+              >
+                Python (httpx / requests)
+              </button>
+              <button
+                onClick={() => setSdkLang('typescript')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium font-mono ${
+                  sdkLang === 'typescript' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 border border-slate-800'
+                }`}
+              >
+                TypeScript / Node.js
+              </button>
+              <button
+                onClick={() => setSdkLang('curl')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium font-mono ${
+                  sdkLang === 'curl' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400 border border-slate-800'
+                }`}
+              >
+                cURL Command
+              </button>
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 relative">
+              <button
+                onClick={() => copyToClipboard(
+                  sdkLang === 'python'
+                    ? `import httpx\n\n# 1. AI Agent calls Gateway Tool\nresponse = httpx.post(\n    "https://gateway.aifoundry.sh/v1/tools/openspec.plan",\n    json={"goal": "Build an AI monetized app"}\n)\n\n# 2. Check for 402 Payment Required\nif response.status_code == 402:\n    challenge = response.json()["x402"]\n    pay_to = challenge["pay_to"]\n    amount_usd = challenge["price_usd"]\n    print(f"Payment Required: Send \${amount_usd} USDC to {pay_to}")\n    \n    # 3. AI Agent signs & submits USDC payment transaction on Base or Solana\n    tx_hash = "0x_signed_usdc_transaction_hash"\n    \n    # 4. Agent retries request with X-402-Payment header\n    paid_response = httpx.post(\n        "https://gateway.aifoundry.sh/v1/tools/openspec.plan",\n        json={"goal": "Build an AI monetized app"},\n        headers={"X-402-Payment": tx_hash}\n    )\n    print("Tool Output:", paid_response.json())`
+                    : sdkLang === 'typescript'
+                    ? `// AI Agent x402 Payment Handler\nasync function callX402Tool(toolName, payload) {\n  let res = await fetch(\`https://gateway.aifoundry.sh/v1/tools/\${toolName}\`, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(payload)\n  });\n\n  if (res.status === 402) {\n    const challenge = await res.json();\n    console.log("402 Challenge:", challenge.x402);\n    \n    // AI Agent submits payment proof\n    const txHash = "0x_signed_usdc_transaction_hash";\n    \n    res = await fetch(\`https://gateway.aifoundry.sh/v1/tools/\${toolName}\`, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'X-402-Payment': txHash\n      },\n      body: JSON.stringify(payload)\n    });\n  }\n\n  return await res.json();\n}`
+                    : `curl -X POST https://gateway.aifoundry.sh/v1/tools/openspec.plan \\\n  -H "Content-Type: application/json" \\\n  -H "X-402-Payment: tx_0x_usdc_payment_hash" \\\n  -d '{"goal":"Build monetized gateway"}'`,
+                  'SDK Snippet'
+                )}
+                className="absolute top-4 right-4 text-xs text-cyan-400 flex items-center gap-1 hover:underline"
+              >
+                <Copy className="w-3.5 h-3.5" /> Copy Snippet
+              </button>
+
+              <pre className="text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed">
+                {sdkLang === 'python' && `import httpx
+
+# 1. AI Agent calls Gateway Tool
+response = httpx.post(
+    "https://gateway.aifoundry.sh/v1/tools/openspec.plan",
+    json={"goal": "Build an AI monetized app"}
+)
+
+# 2. Check for 402 Payment Required
+if response.status_code == 402:
+    challenge = response.json()["x402"]
+    pay_to = challenge["pay_to"]
+    amount_usd = challenge["price_usd"]
+    print(f"Payment Required: Send \${amount_usd} USDC to {pay_to}")
+    
+    # 3. AI Agent signs & submits USDC payment transaction on Base or Solana
+    tx_hash = "0x_signed_usdc_transaction_hash"
+    
+    # 4. Agent retries request with X-402-Payment header
+    paid_response = httpx.post(
+        "https://gateway.aifoundry.sh/v1/tools/openspec.plan",
+        json={"goal": "Build an AI monetized app"},
+        headers={"X-402-Payment": tx_hash}
+    )
+    print("Tool Output:", paid_response.json())`}
+
+                {sdkLang === 'typescript' && `// AI Agent x402 Payment Handler
+async function callX402Tool(toolName, payload) {
+  let res = await fetch(\`https://gateway.aifoundry.sh/v1/tools/\${toolName}\`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-402-Settle-Paid': 'true', // Settles $0.05 USDC micropayment
-    },
-    body: JSON.stringify(promptPayload)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
 
-  if (response.status === 200) {
-    const data = await response.json();
-    return data;
-  } else if (response.status === 402) {
-    throw new Error('x402 Payment Challenge Issued');
+  if (res.status === 402) {
+    const challenge = await res.json();
+    console.log("402 Challenge:", challenge.x402);
+    
+    // AI Agent submits payment proof
+    const txHash = "0x_signed_usdc_transaction_hash";
+    
+    res = await fetch(\`https://gateway.aifoundry.sh/v1/tools/\${toolName}\`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-402-Payment': txHash
+      },
+      body: JSON.stringify(payload)
+    });
   }
-}`}</pre>
-                )}
 
-                {sdkLang === 'curl' && (
-                  <pre className="whitespace-pre">{`# Direct cURL call for AI Agents & Terminal CLIs
-curl -X POST "https://gateway.aifoundry.sh/v1/tools/audit.cf" \\
+  return await res.json();
+}`}
+
+                {sdkLang === 'curl' && `curl -X POST https://gateway.aifoundry.sh/v1/tools/openspec.plan \\
   -H "Content-Type: application/json" \\
-  -H "X-402-Settle-Paid: true" \\
-  -d '{
-    "wrangler_config": "{\\"name\\": \\"my-ai-worker\\", \\"vars\\": {\\"NETWORK\\": \\"base-sepolia\\"}}"
-  }'`}</pre>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: x402 SPECIFICATION */}
-          {activeTab === 'x402spec' && (
-            <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-6">
-              <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-white cyan-text-glow flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-amber-400" />
-                    Machine-Readable Payment Standard Manifest (`/.well-known/x402`)
-                  </h2>
-                  <p className="text-xs text-gray-400 font-mono">Standardized protocol response for web crawler & agent payment discovery</p>
-                </div>
-              </div>
-
-              <pre className="p-4 rounded-2xl bg-black/80 border border-white/10 text-xs font-mono text-cyan-300 overflow-x-auto">
-{JSON.stringify({
-  "x402_version": 1,
-  "gateway": "AIFoundry.sh",
-  "supported_networks": ["base-sepolia", "solana-devnet", "polygon-amoy", "arbitrum-sepolia", "base"],
-  "accepted_assets": ["USDC"],
-  "default_price_usd": 0.05,
-  "facilitator_url": "https://x402.org/facilitator",
-  "pay_to": "0x71C74B532b2C34a5d89f816d8F349582f3402B89",
-  "tools": [
-    { "id": "openspec.plan", "price_usd": 0.05, "endpoint": "/v1/tools/openspec.plan" },
-    { "id": "review.kimi", "price_usd": 0.05, "endpoint": "/v1/tools/review.kimi" },
-    { "id": "audit.cf", "price_usd": 0.05, "endpoint": "/v1/tools/audit.cf" },
-    { "id": "design.402", "price_usd": 0.05, "endpoint": "/v1/tools/design.402" },
-    { "id": "nemotron.chat", "price_usd": 0.05, "endpoint": "/v1/tools/nemotron.chat" }
-  ]
-}, null, 2)}
+  -H "X-402-Payment: tx_0x_usdc_payment_hash" \\
+  -d '{"goal":"Build monetized gateway"}'`}
               </pre>
             </div>
-          )}
-
-        </main>
-      </div>
-
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-const rootElement = document.getElementById('root');
-if (rootElement) {
-  createRoot(rootElement).render(<App />);
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(<App />);
 }
