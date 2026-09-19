@@ -4,7 +4,7 @@
 > **Protocol Standard:** x402 (HTTP 402 Payment Required for Autonomous AI Agents)
 > **Default Price per Tool Call:** $0.05 USDC (or equivalent crypto asset)
 > **Primary Beneficiary Treasury Wallet:** `0x003cC678764C8143a4b92370acB40e3B41319016`
-> **Gateway Base URL:** `https://gateway.aifoundry.sh`
+> **Gateway Base URL:** `https://aifoundry.pages.dev` (or `https://gateway.aifoundry.sh`)
 
 ---
 
@@ -184,7 +184,7 @@ To protect AI agents and gateway operators from budget overruns, the gateway enf
 ```python
 import requests
 
-GATEWAY_URL = "https://gateway.aifoundry.sh/v1/tools/openspec.plan"
+GATEWAY_URL = "https://aifoundry.pages.dev/v1/tools/openspec.plan"
 BENEFICIARY = "0x003cC678764C8143a4b92370acB40e3B41319016"
 
 # Step 1: Probe Gateway
@@ -210,12 +210,12 @@ if res.status_code == 402:
 ### cURL Quick Test Command
 ```bash
 # Challenge Test (Expects 402 Payment Required)
-curl -i -X POST "https://gateway.aifoundry.sh/v1/tools/nemotron.chat" \
+curl -i -X POST "https://aifoundry.pages.dev/v1/tools/nemotron.chat" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Hello x402 gateway!"}'
 
 # Paid Test (Simulated Settlement Header)
-curl -X POST "https://gateway.aifoundry.sh/v1/tools/nemotron.chat" \
+curl -X POST "https://aifoundry.pages.dev/v1/tools/nemotron.chat" \
   -H "Content-Type: application/json" \
   -H "X-402-Payment: tx_0x_settled_usdc_003cC678764C8143a4b92370acB40e3B41319016" \
   -d '{"prompt": "Generate a concise architecture overview."}'
@@ -225,8 +225,8 @@ curl -X POST "https://gateway.aifoundry.sh/v1/tools/nemotron.chat" \
 
 ## 8. Links & Resources
 
-- **x402 Protocol Manifest:** `https://gateway.aifoundry.sh/.well-known/x402`
-- **Tool Catalog JSON:** `https://gateway.aifoundry.sh/v1/tools`
-- **Multi-Chain Treasury Vaults JSON:** `https://gateway.aifoundry.sh/v1/vaults`
-- **Prepaid Token Quota Plan API:** `https://gateway.aifoundry.sh/v1/plan`
-- **Full LLM Machine Context:** `https://gateway.aifoundry.sh/llms.txt`
+- **x402 Protocol Manifest:** `https://aifoundry.pages.dev/.well-known/x402`
+- **Tool Catalog JSON:** `https://aifoundry.pages.dev/v1/tools`
+- **Multi-Chain Treasury Vaults JSON:** `https://aifoundry.pages.dev/v1/vaults`
+- **Prepaid Token Quota Plan API:** `https://aifoundry.pages.dev/v1/plan`
+- **Full LLM Machine Context:** `https://aifoundry.pages.dev/llms.txt`

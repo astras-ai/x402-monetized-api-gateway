@@ -225,7 +225,7 @@ Title: AIFoundry.sh x402 Pay-Per-Call Edge Gateway & Multi-Chain AI Service Mark
 Protocol Standard: x402 (HTTP 402 Payment Required)
 Default Price: $0.05 USDC
 Primary Beneficiary: 0x003cC678764C8143a4b92370acB40e3B41319016
-Gateway URL: https://gateway.aifoundry.sh
+Gateway URL: https://aifoundry.pages.dev
 
 Tools Available:
 1. /v1/tools/openspec.plan ($0.05 USDC) - Architecture & Dev Plan Generator

@@ -302,7 +302,7 @@ export async function runNemotron(
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${key}`,
-          'HTTP-Referer': 'https://gateway.aifoundry.sh',
+          'HTTP-Referer': 'https://aifoundry.pages.dev',
           'X-Title': 'AIFoundry.sh x402 Gateway'
         },
         body: JSON.stringify({

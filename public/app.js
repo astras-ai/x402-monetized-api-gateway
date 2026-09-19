@@ -329,7 +329,8 @@ export function App() {
           h('div', null,
             h('div', { className: 'flex items-center gap-2' },
               h('span', { className: 'font-mono font-bold text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-indigo-300 to-fuchsia-400 bg-clip-text text-transparent' }, 'AIFoundry.sh'),
-              h('span', { className: 'px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' }, 'x402 Gateway v1.0')
+              h('span', { className: 'px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' }, 'x402 Gateway v1.0'),
+              h('a', { href: 'https://aifoundry.pages.dev', target: '_blank', rel: 'noreferrer', className: 'hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/20 transition-colors' }, 'aifoundry.pages.dev')
             ),
             h('p', { className: 'text-xs text-gray-400 font-mono hidden sm:block' }, 'Beneficiary: 0x003cC678764C8143a4b92370acB40e3B41319016')
           )
