@@ -405,23 +405,6 @@ app.get('/', async (c) => {
 
   return c.json({ status: 'ok', name: 'AIFoundry.sh x402 Gateway' });
 });
-        price_usd: 0.05,
-        status: 'production',
-        description: 'Cloudflare Workers configuration & security audit skill.'
-      },
-      {
-        name: 'design.402',
-        endpoint: '/v1/tools/design.402',
-        method: 'POST',
-        sku: 'T10K',
-        price_usd: 0.05,
-        status: 'production',
-        description: 'Human-centered OpenDesign UI/UX specification generator.'
-      }
-    ],
-    documentation: `https://${host}/app`
-  });
-});
 
 app.get('/app', async (c) => {
   if (c.env.ASSETS) {
