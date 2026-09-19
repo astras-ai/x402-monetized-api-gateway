@@ -24,23 +24,32 @@ import {
   BookOpen,
   ArrowUpRight,
   Activity,
-  KeyRound
+  UserCheck,
+  Users,
+  Compass,
+  PieChart,
+  Boxes,
+  Lock,
+  Workflow
 } from 'lucide-react';
 
 const CosmicLogo = () => {
   return (
-    <div className="relative w-10 h-10 flex items-center justify-center">
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 blur-md opacity-60 animate-pulse" />
-      <div className="relative w-10 h-10 rounded-xl bg-slate-950 border border-cyan-500/30 flex items-center justify-center shadow-inner">
-        <Bot className="w-5 h-5 text-cyan-400" />
+    <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 blur-md opacity-70 animate-pulse" />
+      <div className="relative w-10 h-10 rounded-xl bg-slate-950 border border-cyan-500/40 flex items-center justify-center shadow-inner">
+        <svg viewBox="0 0 100 100" className="w-6 h-6 text-cyan-400">
+          <polygon points="20,20 80,20 80,80 20,80" stroke="currentColor" fill="none" strokeWidth="6" />
+          <polygon points="35,35 65,35 65,65 35,65" stroke="#818cf8" fill="none" strokeWidth="6" />
+          <circle cx="50" cy="50" r="8" fill="#22d3ee" />
+        </svg>
       </div>
     </div>
   );
 };
 
 export function App() {
-  const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'catalog', 'sdks', 'x402spec'
-  const [selectedNetwork, setSelectedNetwork] = useState('base-sepolia');
+  const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'arch', 'roles', 'catalog', 'business', 'sdks'
   const [notification, setNotification] = useState(null);
 
   // Simulator State
@@ -121,13 +130,13 @@ export function App() {
 
   const toolDetails = {
     'openspec.plan': {
-      title: 'OpenSpec Software Architecture',
+      title: 'OpenSpec Software Architecture Generator',
       price: '$0.05 USDC',
       desc: 'Generates software dev plans, tech stacks, and team persona architectures.',
       provider: 'Fission AI OpenSpec + DeepSeek R1'
     },
     'review.kimi': {
-      title: 'Alibaba Open Code Review',
+      title: 'Alibaba Open Code Review (Kimi)',
       price: '$0.05 USDC',
       desc: 'AST code review with exact token receipt metering and security checks.',
       provider: 'Alibaba Open Code Review'
@@ -151,6 +160,57 @@ export function App() {
       provider: 'Cloudflare Workers AI'
     }
   };
+
+  const rolesData = [
+    {
+      role: 'Founder / Operator',
+      persona: 'Maya',
+      quote: '"Focus on execution. Ship one verified rung at a time. Never expose vendor keys."',
+      owns: 'Product vision, domain configuration, settlement wallet, list pricing ($0.05 USDC)',
+      aiPair: 'Grok / DeepSeek R1',
+      successMetric: 'Direct HTTP 402 challenge on unpaid calls + 200 OK execution on paid USDC calls'
+    },
+    {
+      role: 'Edge & Payments Engineer',
+      persona: 'Kai',
+      quote: '"Cryptographic proof or HTTP 402 challenge. Zero mock balances in production."',
+      owns: 'Cloudflare Worker, x402 header negotiation, settlement verification',
+      aiPair: 'Grok + Cloudflare Worker Template',
+      successMetric: 'Instant 402 WWW-Authenticate headers with asset="USDC" and network parameters'
+    },
+    {
+      role: 'Tool Smith',
+      persona: 'Rafi',
+      quote: '"Modular wraps around upstream open-source AI tools with token receipt metering."',
+      owns: 'Adapters for OpenSpec, Alibaba Kimi Code Review, CF Security Audit, OpenDesign',
+      aiPair: 'Kimi + Fission-AI OpenSpec',
+      successMetric: 'Clean JSON response with token receipts and execution outputs'
+    },
+    {
+      role: 'Product Catalog Director',
+      persona: 'Noor',
+      quote: '"Endpoints that both autonomous AI agents and human developers can parse instantly."',
+      owns: 'Endpoint schema design, GET /.well-known/x402 manifest, developer documentation',
+      aiPair: 'DeepSeek Morning',
+      successMetric: '100% compliant machine-readable discovery manifest at /.well-known/x402'
+    },
+    {
+      role: 'Risk & Treasury Guardian',
+      persona: 'Sol',
+      quote: '"Prepaid model only. Never store API keys in browser or client code."',
+      owns: '3x vendor margin rule, token cost caps, Cloudflare secrets management',
+      aiPair: 'Cloudflare Security Audit Skill',
+      successMetric: 'Zero unbounded vendor key leakage and guaranteed positive gross margin'
+    },
+    {
+      role: 'Human UI/UX Specialist',
+      persona: 'Lea',
+      quote: '"Clean cosmic design for human developers while keeping the AI payment protocol front-and-center."',
+      owns: 'OpenDesign Tailwind theme tokens, cosmic grid visuals, simulator UX',
+      aiPair: 'OpenDesign DeepSeek',
+      successMetric: 'S-tier SaaS responsive interface with dark cosmic aesthetics'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-black">
@@ -186,10 +246,10 @@ export function App() {
                   AIFoundry.sh
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  x402 Protocol
+                  x402 Protocol Gateway
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Direct Pay-Per-Call AI Gateway for Autonomous AI Agents</p>
+              <p className="text-xs text-slate-400">Direct Pay-Per-Call AI Edge Gateway for Autonomous AI Agents</p>
             </div>
           </div>
 
@@ -204,54 +264,87 @@ export function App() {
       </header>
 
       {/* Hero Banner */}
-      <div className="border-b border-slate-800 bg-gradient-to-b from-cyan-950/20 via-slate-950 to-slate-950 py-8 px-4 sm:px-6">
+      <div className="border-b border-slate-800 bg-gradient-to-b from-cyan-950/20 via-slate-950 to-slate-950 py-6 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/50 text-cyan-300 text-xs mb-3">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>No API keys. No subscriptions. Pay-per-call for AI Agents.</span>
+              <span>No API keys. No subscriptions. Direct Pay-Per-Call for AI Agents.</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
               Pay-Per-Call AI Edge Gateway for Autonomous Agents
             </h1>
-            <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-              When an AI agent requests a tool without payment, the gateway responds with an <code className="text-cyan-300 font-mono">HTTP 402 Payment Required</code> challenge with exact pricing and recipient address. Once the payment proof is included, execution runs instantly.
+            <p className="mt-1.5 text-xs sm:text-sm text-slate-400 leading-relaxed">
+              When an AI agent requests a tool without payment, the gateway responds with an <code className="text-cyan-300 font-mono">HTTP 402 Payment Required</code> challenge. Once payment proof is attached, execution completes instantly on Cloudflare Workers edge nodes.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 sm:gap-3 shrink-0">
+          <div className="flex flex-wrap gap-2 shrink-0">
             <button
               onClick={() => setActiveTab('simulator')}
-              className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
                 activeTab === 'simulator'
                   ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Play className="w-4 h-4" />
+              <Play className="w-3.5 h-3.5" />
               Live AI Simulator
             </button>
             <button
+              onClick={() => setActiveTab('arch')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                activeTab === 'arch'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <Workflow className="w-3.5 h-3.5" />
+              Software Architecture
+            </button>
+            <button
+              onClick={() => setActiveTab('roles')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                activeTab === 'roles'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Roles & Personas
+            </button>
+            <button
               onClick={() => setActiveTab('catalog')}
-              className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
                 activeTab === 'catalog'
                   ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Cpu className="w-4 h-4" />
+              <Cpu className="w-3.5 h-3.5" />
               Tool Catalog ($0.05)
             </button>
             <button
+              onClick={() => setActiveTab('business')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                activeTab === 'business'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <PieChart className="w-3.5 h-3.5" />
+              Business Plan & Logo
+            </button>
+            <button
               onClick={() => setActiveTab('sdks')}
-              className={`px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
                 activeTab === 'sdks'
                   ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
-              <Code2 className="w-4 h-4" />
-              AI Agent Integration Code
+              <Code2 className="w-3.5 h-3.5" />
+              AI SDK Code
             </button>
           </div>
         </div>
@@ -453,7 +546,136 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 2: TOOL CATALOG */}
+        {/* TAB 2: SOFTWARE ARCHITECTURE & DEV PLAN */}
+        {activeTab === 'arch' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Workflow className="w-5 h-5 text-cyan-400" />
+                Software Architecture & Development Plan (OpenSpec)
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Paired with Grok & DeepSeek R1 to define the x402 edge protocol pipeline, Cloudflare Worker isolate boundaries, and non-custodial payment verification.
+              </p>
+            </div>
+
+            {/* Visual Architecture Diagram */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 font-mono text-xs">
+              <div className="text-cyan-400 font-bold mb-3 flex items-center gap-2">
+                <Boxes className="w-4 h-4" /> System Flow Diagram
+              </div>
+              <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-slate-300 leading-relaxed overflow-x-auto">
+                {`[ Autonomous AI Agent / Curl / Script ]
+                   │
+                   ├── 1. POST /v1/tools/openspec.plan (Unpaid Request)
+                   │
+                   ▼
+         [ Cloudflare Worker Edge Gateway ]
+                   │
+                   ├── 2. Inspects Request Headers for X-402-Payment
+                   ├── 3. Payment Missing ──► Returns HTTP 402 Payment Required
+                   │                          Header: WWW-Authenticate: x402 asset="USDC", price="0.05"
+                   │                          Body: { price_usd: 0.05, pay_to: "0x71C7..." }
+                   │
+                   ├── 4. AI Agent Submits USDC Payment Tx on Base / Solana
+                   │
+                   ├── 5. POST /v1/tools/openspec.plan (With X-402-Payment: tx_0x...)
+                   │
+                   ▼
+         [ Tool Execution Pipeline ]
+                   ├── OpenSpec Architecture Planner (DeepSeek R1)
+                   ├── Alibaba Open Code Review Engine (Kimi + Token Metering)
+                   ├── Cloudflare Security Audit Skill (Wrangler Config Scanner)
+                   ├── OpenDesign UI Spec Generator
+                   └── Edge LLM Inference (Workers AI)
+                   │
+                   ▼
+         [ HTTP 200 OK Response + Tool Payload + Metered Token Receipt ]`}
+              </div>
+            </div>
+
+            {/* Architecture Highlights */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+                <div className="text-cyan-400 font-bold text-sm flex items-center gap-2">
+                  <Lock className="w-4 h-4" /> Non-Custodial Secret Model
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  No API keys or variables are stored in browser client state. All vendor operations are executed server-side via Cloudflare Worker secrets.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+                <div className="text-indigo-400 font-bold text-sm flex items-center gap-2">
+                  <Activity className="w-4 h-4" /> Server-Side Edge Logs
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Logs stay on Cloudflare edge servers and stdout streams. No sensitive prompt logs or customer IP addresses are persisted inside the web client.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+                <div className="text-emerald-400 font-bold text-sm flex items-center gap-2">
+                  <Coins className="w-4 h-4" /> Multi-Chain USDC Settlement
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Native settlement specs for Base Sepolia (84532), Base Mainnet (8453), Solana Devnet, Polygon Amoy, and Arbitrum Sepolia.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: ROLES & PERSONA MATRIX */}
+        {activeTab === 'roles' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-400" />
+                Team Roles & Technical Personas
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Technical and business roles defined for the AIFoundry.sh network, paired with dedicated AI models to build and maintain the x402 gateway.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rolesData.map((item, idx) => (
+                <div key={idx} className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-slate-100">{item.role}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-500/30">
+                        Persona: {item.persona}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-cyan-300 italic font-mono bg-slate-950/80 p-2.5 rounded border border-slate-800/80">
+                      {item.quote}
+                    </p>
+
+                    <div className="text-xs space-y-1 pt-1">
+                      <div>
+                        <span className="text-slate-500 font-medium">Owns: </span>
+                        <span className="text-slate-300">{item.owns}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 font-medium">AI Model Pair: </span>
+                        <span className="text-cyan-400 font-semibold">{item.aiPair}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800 text-[11px] font-mono text-slate-400">
+                    <span className="text-emerald-400 font-bold">Goal: </span> {item.successMetric}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: TOOL CATALOG */}
         {activeTab === 'catalog' && (
           <div className="space-y-6">
             <div className="border-b border-slate-800 pb-4">
@@ -496,7 +718,96 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 3: INTEGRATION CODE FOR AI AGENTS */}
+        {/* TAB 5: BUSINESS PLAN & LOGO */}
+        {activeTab === 'business' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-emerald-400" />
+                Business Plan & Unit Economics
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Financial architecture, Cloudflare edge cost structure, and gross margin principles for AI agent monetization.
+              </p>
+            </div>
+
+            {/* Logo Showcase */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-cyan-500/40 flex items-center justify-center shadow-xl">
+                  <svg viewBox="0 0 100 100" className="w-10 h-10 text-cyan-400">
+                    <polygon points="20,20 80,20 80,80 20,80" stroke="currentColor" fill="none" strokeWidth="6" />
+                    <polygon points="35,35 65,35 65,65 35,65" stroke="#818cf8" fill="none" strokeWidth="6" />
+                    <circle cx="50" cy="50" r="8" fill="#22d3ee" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xl text-white">AIFoundry.sh Logo Mark</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Symbolizes an Anvil + 4D Hypercube Tesseract, representing structural AI foundation and x402 payment execution.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 px-4 py-3 rounded-lg border border-slate-800 text-xs font-mono text-cyan-300">
+                Brand Anchor: Cosmic Edge Dark (#030712) + Cyan (#06b6d4) + Indigo (#6366f1)
+              </div>
+            </div>
+
+            {/* Pricing Table */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
+              <h3 className="font-bold text-sm text-slate-200">SKU Pricing & Cost Comparison</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase font-mono">
+                    <tr>
+                      <th className="p-3">SKU</th>
+                      <th className="p-3">List Price</th>
+                      <th className="p-3">Execution Budget</th>
+                      <th className="p-3">Upstream Cost</th>
+                      <th className="p-3">Gross Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    <tr>
+                      <td className="p-3 font-bold text-cyan-300 font-mono">T10K</td>
+                      <td className="p-3 font-semibold text-emerald-400">$0.05 USDC</td>
+                      <td className="p-3 text-slate-300">10,000 Input / 10,000 Output tokens</td>
+                      <td className="p-3 text-slate-400">~$0.015</td>
+                      <td className="p-3 font-bold text-emerald-400">70% Margin (3.3x COGS)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-bold text-indigo-300 font-mono">M10</td>
+                      <td className="p-3 font-semibold text-emerald-400">$0.05 USDC</td>
+                      <td className="p-3 text-slate-300">10 Minutes Wall-Clock Edge Isolate</td>
+                      <td className="p-3 text-slate-400">~$0.010</td>
+                      <td className="p-3 font-bold text-emerald-400">80% Margin (5x COGS)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Business Principles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+                <div className="text-cyan-400 font-bold text-sm">3x COGS Floor Rule</div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  List price for any tool is strictly set to ≥ 3x estimated upstream LLM or Cloudflare compute cost to guarantee profitable operations under peak loads.
+                </p>
+              </div>
+
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-2">
+                <div className="text-emerald-400 font-bold text-sm">Direct Wallet Settlement</div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Payments are received directly into the operator's non-custodial wallet address (<code className="text-cyan-300">0x71C7...2B89</code>). No third-party payment processor cut.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: INTEGRATION CODE FOR AI AGENTS */}
         {activeTab === 'sdks' && (
           <div className="space-y-6">
             <div className="border-b border-slate-800 pb-4">
