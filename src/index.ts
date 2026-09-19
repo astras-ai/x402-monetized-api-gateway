@@ -891,14 +891,23 @@ app.post('/v1/tools/:toolName', async (c) => {
   c.header('X-AIFoundry-Jti', grantClaims.jti);
   c.header('X-AIFoundry-Budget-Remaining', String(budgetCheck.remainingOut));
 
+  // Merge transient client request headers (e.g. pulled directly from macOS Keychain via CLI)
+  const clientCfToken = c.req.header('x-cf-token') || c.req.header('x-upstream-api-key');
+  const clientCfAccountId = c.req.header('x-cf-account-id');
+  const mergedEnv = {
+    ...c.env,
+    ...(clientCfToken ? { CF_API_TOKEN: clientCfToken } : {}),
+    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {})
+  };
+
   // Route Execution
   const startTime = Date.now();
   let resultResponse: any = null;
 
   if (toolName === 'openspec.plan') {
-    resultResponse = await handleOpenSpecPlan(c.env, body);
+    resultResponse = await handleOpenSpecPlan(mergedEnv, body);
   } else if (toolName === 'nemotron.chat') {
-    const res = await runNemotron(c.env, body, 'chat');
+    const res = await runNemotron(mergedEnv, body, 'chat');
     resultResponse = {
       ok: true,
       tool: 'nemotron.chat',
@@ -909,11 +918,11 @@ app.post('/v1/tools/:toolName', async (c) => {
       provider: res.provider
     };
   } else if (toolName === 'review.kimi') {
-    resultResponse = await handleReviewKimi(c.env, body);
+    resultResponse = await handleReviewKimi(mergedEnv, body);
   } else if (toolName === 'audit.cf') {
-    resultResponse = await handleAuditCf(c.env, body);
+    resultResponse = await handleAuditCf(mergedEnv, body);
   } else if (toolName === 'design.402') {
-    resultResponse = await handleDesign402(c.env, body);
+    resultResponse = await handleDesign402(mergedEnv, body);
   } else {
     return c.json({ error: `Unknown tool name: ${toolName}` }, 404);
   }

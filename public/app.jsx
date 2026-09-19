@@ -397,7 +397,7 @@ export function App() {
       return;
     }
     try {
-      const res = await fetch('/api/secrets', {
+      const res = await fetch('api/secrets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -433,7 +433,7 @@ export function App() {
     }
 
     try {
-      const res = await fetch('/api/secrets/decrypt', {
+      const res = await fetch('api/secrets/decrypt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,7 +462,7 @@ export function App() {
     }
     try {
       const existing = secretsList.find(s => s.key_name === key_name);
-      const res = await fetch('/api/secrets', {
+      const res = await fetch('api/secrets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -493,7 +493,7 @@ export function App() {
 
   const handleDeleteSecret = async (key_name) => {
     try {
-      const res = await fetch(`/api/secrets/${encodeURIComponent(key_name)}`, { method: 'DELETE' });
+      const res = await fetch(`api/secrets/${encodeURIComponent(key_name)}`, { method: 'DELETE' });
       if (res.ok) {
         showToast(`Secret ${key_name} deleted.`, 'info');
         refreshData();
@@ -506,7 +506,7 @@ export function App() {
   const handleTestCrypto = async (action) => {
     if (!sandboxInput) return;
     try {
-      const res = await fetch('/api/secrets/test-crypto', {
+      const res = await fetch('api/secrets/test-crypto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1157,6 +1157,46 @@ export function App() {
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                       </button>
+                    </div>
+
+                    {/* macOS Keychain Integration & Zero-Storage Guide */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 to-indigo-950/60 border border-cyan-500/30 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 font-mono text-[10px] font-bold">
+                             macOS KEYCHAIN READY
+                          </div>
+                          <span className="text-xs font-bold text-white">Transient Zero-Storage Mode</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        If you are deleting secrets after testing because you prefer not to store secrets on Cloudflare Edge servers, you can pull tokens directly from your local <strong className="text-cyan-300">macOS Keychain</strong> on the fly! The gateway accepts transient request headers (<code className="text-amber-300">X-CF-Token</code>) per call, so <strong>zero secrets are saved on the edge</strong>.
+                      </p>
+                      
+                      <div className="space-y-2 font-mono text-[11px]">
+                        <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300">
+                          <div className="text-cyan-400 font-bold mb-1">1. Save token in macOS Keychain (one time):</div>
+                          <code className="text-emerald-300 select-all break-all">
+                            security add-generic-password -a "$USER" -s "cf-api-token" -w "your_secret_token_here"
+                          </code>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300">
+                          <div className="text-amber-400 font-bold mb-1">2. Run x402 Call pulling directly from macOS Keychain (Transient header):</div>
+                          <code className="text-emerald-300 select-all break-all">
+                            curl -X POST "https://gateway.aifoundry.sh/v1/tools/review.kimi" \<br/>
+                            &nbsp;&nbsp;-H "X-CF-Token: $(security find-generic-password -w -s 'cf-api-token')" \<br/>
+                            &nbsp;&nbsp;-H "Content-Type: application/json" -d '&#123;"code": "const x = 1;"&#125;'
+                          </code>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300">
+                          <div className="text-purple-400 font-bold mb-1">3. Optional: Sync directly to Cloudflare Secrets via Wrangler CLI:</div>
+                          <code className="text-emerald-300 select-all break-all">
+                            security find-generic-password -w -s "cf-api-token" | npx wrangler secret put CF_API_TOKEN
+                          </code>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
