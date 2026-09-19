@@ -443,11 +443,40 @@ async function parseRequestBody(c: any): Promise<any> {
     }
   }
 
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
+  const bearerVal = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.substring(7).trim() : authHeader;
+
+  const headerApiKey =
+    c.req.header('x-api-key') ||
+    c.req.header('api-key') ||
+    c.req.header('x-key') ||
+    c.req.header('key') ||
+    (bearerVal && (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') || bearerVal.length > 15) ? bearerVal : '');
+
+  const headerCfToken = c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.header('x-cloudflare-token');
+  const headerCfAccountId = c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.header('x-cloudflare-account-id');
+  const headerOpenAiKey = c.req.header('x-openai-key') || c.req.header('openai-key');
+  const headerDeepSeekKey = c.req.header('x-deepseek-key') || c.req.header('deepseek-key');
+  const headerOpenRouterKey = c.req.header('x-openrouter-key') || c.req.header('openrouter-key');
+
   const qPrompt = c.req.query('prompt') || c.req.query('q') || c.req.query('goal');
   const qCode = c.req.query('code') || c.req.query('snippet');
   const qLang = c.req.query('language');
   const qBrief = c.req.query('brief') || c.req.query('topic');
   const qModel = c.req.query('model');
+  const qBaseUrl = c.req.query('base_url') || c.req.query('baseUrl');
+  const qApiKey = c.req.query('api_key') || c.req.query('apiKey') || c.req.query('key') || c.req.query('token');
+  const qCfToken = c.req.query('cf_token') || c.req.query('cfToken') || c.req.query('cloudflare_token');
+  const qCfAccountId = c.req.query('cf_account_id') || c.req.query('cfAccountId') || c.req.query('account_id');
+
+  const apiKey = body.api_key || body.apiKey || body.key || body.token || body.API_KEY || headerApiKey || qApiKey;
+  const cfToken = body.cf_token || body.cfToken || body.CF_API_TOKEN || body.CLOUDFLARE_API_TOKEN || headerCfToken || qCfToken;
+  const cfAccountId = body.cf_account_id || body.cfAccountId || body.CF_ACCOUNT_ID || body.CLOUDFLARE_ACCOUNT_ID || headerCfAccountId || qCfAccountId;
+  const openaiKey = body.openai_key || body.openAiKey || body.OPENAI_API_KEY || headerOpenAiKey;
+  const deepseekKey = body.deepseek_key || body.deepSeekKey || body.DEEPSEEK_API_KEY || headerDeepSeekKey;
+  const openrouterKey = body.openrouter_key || body.openRouterKey || body.OPENROUTER_API_KEY || headerOpenRouterKey;
+  const model = body.model || qModel;
+  const baseUrl = body.base_url || body.baseUrl || qBaseUrl;
 
   return {
     ...body,
@@ -455,7 +484,14 @@ async function parseRequestBody(c: any): Promise<any> {
     ...(qCode && !body.code ? { code: qCode } : {}),
     ...(qLang && !body.language ? { language: qLang } : {}),
     ...(qBrief && !body.brief ? { brief: qBrief } : {}),
-    ...(qModel && !body.model ? { model: qModel } : {})
+    ...(apiKey ? { api_key: apiKey, apiKey, key: apiKey, token: apiKey, API_KEY: apiKey } : {}),
+    ...(cfToken ? { cf_token: cfToken, cfToken, CF_API_TOKEN: cfToken, CLOUDFLARE_API_TOKEN: cfToken } : {}),
+    ...(cfAccountId ? { cf_account_id: cfAccountId, cfAccountId, CF_ACCOUNT_ID: cfAccountId, CLOUDFLARE_ACCOUNT_ID: cfAccountId } : {}),
+    ...(openaiKey ? { openai_key: openaiKey, openAiKey: openaiKey, OPENAI_API_KEY: openaiKey } : {}),
+    ...(deepseekKey ? { deepseek_key: deepseekKey, deepSeekKey: deepseekKey, DEEPSEEK_API_KEY: deepseekKey } : {}),
+    ...(openrouterKey ? { openrouter_key: openrouterKey, openRouterKey: openrouterKey, OPENROUTER_API_KEY: openrouterKey } : {}),
+    ...(model ? { model } : {}),
+    ...(baseUrl ? { base_url: baseUrl, baseUrl } : {})
   };
 }
 
@@ -480,7 +516,19 @@ app.on(['GET', 'POST'], ['/v1/chat/completions', '/chat/completions'], async (c)
     c.req.query('tx') ||
     body?.payment_proof;
 
+  const clientCfToken = body?.cf_token || body?.cfToken || body?.CF_API_TOKEN || body?.CLOUDFLARE_API_TOKEN || c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.query('cf_token');
+  const clientCfAccountId = body?.cf_account_id || body?.cfAccountId || body?.CF_ACCOUNT_ID || body?.CLOUDFLARE_ACCOUNT_ID || c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.query('cf_account_id');
+  const clientApiKey = body?.api_key || body?.apiKey || body?.key || body?.token || body?.API_KEY || c.req.header('x-api-key') || c.req.header('api-key') || (bearerVal && (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') || bearerVal.length > 20) ? bearerVal : '');
+  const clientOpenAiKey = body?.openai_key || body?.openAiKey || body?.OPENAI_API_KEY || c.req.header('x-openai-key');
+  const clientDeepSeekKey = body?.deepseek_key || body?.deepSeekKey || body?.DEEPSEEK_API_KEY || c.req.header('x-deepseek-key');
+  const clientOpenRouterKey = body?.openrouter_key || body?.openRouterKey || body?.OPENROUTER_API_KEY || c.req.header('x-openrouter-key');
+
   const hasApiKey = Boolean(
+    clientApiKey ||
+    clientCfToken ||
+    clientOpenAiKey ||
+    clientDeepSeekKey ||
+    clientOpenRouterKey ||
     c.req.header('x-api-key') ||
     c.req.header('api-key') ||
     c.req.header('x-cf-token') ||
@@ -519,17 +567,10 @@ app.on(['GET', 'POST'], ['/v1/chat/completions', '/chat/completions'], async (c)
     });
   }
 
-  const clientCfToken = c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.query('cf_token') || body?.cf_token;
-  const clientCfAccountId = c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.query('cf_account_id') || body?.cf_account_id;
-  const clientApiKey = c.req.header('x-api-key') || c.req.header('api-key') || body?.api_key || (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') ? bearerVal : '');
-  const clientOpenAiKey = c.req.header('x-openai-key') || body?.openai_key;
-  const clientDeepSeekKey = c.req.header('x-deepseek-key') || body?.deepseek_key;
-  const clientOpenRouterKey = c.req.header('x-openrouter-key') || body?.openrouter_key;
-
   const mergedEnv = {
     ...c.env,
-    ...(clientCfToken ? { CF_API_TOKEN: clientCfToken } : {}),
-    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {}),
+    ...(clientCfToken ? { CF_API_TOKEN: clientCfToken, CLOUDFLARE_API_TOKEN: clientCfToken, AI_API_TOKEN: clientCfToken } : {}),
+    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId, CLOUDFLARE_ACCOUNT_ID: clientCfAccountId } : {}),
     ...(clientApiKey ? { API_KEY: clientApiKey } : {}),
     ...(clientOpenAiKey ? { OPENAI_API_KEY: clientOpenAiKey } : {}),
     ...(clientDeepSeekKey ? { DEEPSEEK_API_KEY: clientDeepSeekKey } : {}),
@@ -596,7 +637,19 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
     c.req.query('tx') ||
     body?.payment_proof;
 
+  const clientCfToken = body?.cf_token || body?.cfToken || body?.CF_API_TOKEN || body?.CLOUDFLARE_API_TOKEN || c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.query('cf_token');
+  const clientCfAccountId = body?.cf_account_id || body?.cfAccountId || body?.CF_ACCOUNT_ID || body?.CLOUDFLARE_ACCOUNT_ID || c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.query('cf_account_id');
+  const clientApiKey = body?.api_key || body?.apiKey || body?.key || body?.token || body?.API_KEY || c.req.header('x-api-key') || c.req.header('api-key') || (bearerVal && (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') || bearerVal.length > 20) ? bearerVal : '');
+  const clientOpenAiKey = body?.openai_key || body?.openAiKey || body?.OPENAI_API_KEY || c.req.header('x-openai-key');
+  const clientDeepSeekKey = body?.deepseek_key || body?.deepSeekKey || body?.DEEPSEEK_API_KEY || c.req.header('x-deepseek-key');
+  const clientOpenRouterKey = body?.openrouter_key || body?.openRouterKey || body?.OPENROUTER_API_KEY || c.req.header('x-openrouter-key');
+
   const hasApiKey = Boolean(
+    clientApiKey ||
+    clientCfToken ||
+    clientOpenAiKey ||
+    clientDeepSeekKey ||
+    clientOpenRouterKey ||
     c.req.header('x-api-key') ||
     c.req.header('api-key') ||
     c.req.header('x-cf-token') ||
@@ -640,18 +693,10 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
     });
   }
 
-  // Client provided payment or key — execute requested tool!
-  const clientCfToken = c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.query('cf_token') || body?.cf_token;
-  const clientCfAccountId = c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.query('cf_account_id') || body?.cf_account_id;
-  const clientApiKey = c.req.header('x-api-key') || c.req.header('api-key') || body?.api_key || (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') ? bearerVal : '');
-  const clientOpenAiKey = c.req.header('x-openai-key') || body?.openai_key;
-  const clientDeepSeekKey = c.req.header('x-deepseek-key') || body?.deepseek_key;
-  const clientOpenRouterKey = c.req.header('x-openrouter-key') || body?.openrouter_key;
-
   const mergedEnv = {
     ...c.env,
-    ...(clientCfToken ? { CF_API_TOKEN: clientCfToken } : {}),
-    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {}),
+    ...(clientCfToken ? { CF_API_TOKEN: clientCfToken, CLOUDFLARE_API_TOKEN: clientCfToken, AI_API_TOKEN: clientCfToken } : {}),
+    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId, CLOUDFLARE_ACCOUNT_ID: clientCfAccountId } : {}),
     ...(clientApiKey ? { API_KEY: clientApiKey } : {}),
     ...(clientOpenAiKey ? { OPENAI_API_KEY: clientOpenAiKey } : {}),
     ...(clientDeepSeekKey ? { DEEPSEEK_API_KEY: clientDeepSeekKey } : {}),

@@ -22,10 +22,9 @@ Generate a high-end SaaS design spec including color tokens, typography, atomic 
       const aiRes = await runNemotron(
         env,
         {
+          ...body,
           prompt: `Generate an OpenDesign UI/UX architectural spec for a web application brief: "${brief}". Include color tokens, typography, component layout hierarchy, and x402 paywall wireframe guidelines.`,
-          system_prompt: systemPrompt,
-          api_key: body?.api_key,
-          cf_token: body?.cf_token
+          system_prompt: systemPrompt
         },
         'design'
       );

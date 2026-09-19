@@ -14,10 +14,9 @@ Be concise, specific, and actionable. Provide line-level recommendations.`;
   const aiResult = await runNemotron(
     env,
     {
+      ...body,
       prompt: reviewPrompt,
-      system_prompt: systemPrompt,
-      api_key: body?.api_key,
-      cf_token: body?.cf_token
+      system_prompt: systemPrompt
     },
     'review'
   );

@@ -3,7 +3,7 @@ import { runNemotron } from '../nemotron';
 
 export async function handleOpenSpecPlan(env: any, body: any) {
   const goal = body?.goal || body?.prompt || 'Build an x402 Gateway';
-  const result = await runNemotron(env, { goal }, 'openspec');
+  const result = await runNemotron(env, { ...body, goal }, 'openspec');
 
   return {
     ok: true,

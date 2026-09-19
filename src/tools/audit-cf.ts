@@ -132,10 +132,9 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
       const aiResponse = await runNemotron(
         env,
         {
+          ...body,
           prompt: summaryPrompt,
           system_prompt: 'You are Cloudflare Workers Security Auditor. Provide strict, practical security analysis.',
-          api_key: body?.api_key,
-          cf_token: body?.cf_token,
           max_tokens: 400
         },
         'audit'
