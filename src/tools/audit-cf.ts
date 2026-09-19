@@ -1,11 +1,14 @@
 // Tool Adapter: Cloudflare Workers & Security Audit Skill
 // Inspired by cloudflare/security-audit-skill
 
+import { runNemotron } from '../nemotron';
+
 export interface AuditCfInput {
   wrangler_config?: string;
   source_code?: string;
   environment_vars?: Record<string, string>;
   project_type?: 'worker' | 'pages' | 'durable_objects' | 'hyperdrive';
+  include_ai_insights?: boolean;
 }
 
 export interface AuditIssue {
@@ -23,6 +26,7 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
   const sourceCode = body?.source_code || '';
   const envVars = body?.environment_vars || {};
   const projectType = body?.project_type || 'worker';
+  const includeAiInsights = body?.include_ai_insights ?? true;
 
   const issues: AuditIssue[] = [];
   const passedChecks: string[] = [];
@@ -156,6 +160,22 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
   }
   const score = Math.max(0, Math.min(100, 100 - penalty));
 
+  // Optional AI Reasoning Enrichment via TypeScript Workers AI (DeepSeek-R1 / Nemotron)
+  let aiReasoning = null;
+  if (includeAiInsights && issues.length > 0) {
+    try {
+      const summaryPrompt = `Analyze these ${issues.length} Cloudflare Workers security issues detected during x402 audit:\n${issues.map(i => `- [${i.severity}] ${i.title}: ${i.description}`).join('\n')}\nProvide a concise 2-sentence executive mitigation strategy for a production deployment.`;
+      const aiResponse = await runNemotron(env, { prompt: summaryPrompt, max_tokens: 300 });
+      aiReasoning = {
+        model: aiResponse.model,
+        provider: aiResponse.provider,
+        insight: aiResponse.result
+      };
+    } catch (err) {
+      console.warn('AI reasoning enrichment skipped:', err);
+    }
+  }
+
   return {
     ok: true,
     tool: 'audit.cf',
@@ -171,6 +191,7 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
       medium: issues.filter(i => i.severity === 'MEDIUM').length,
       low: issues.filter(i => i.severity === 'LOW').length,
     },
+    ai_reasoning: aiReasoning,
     vendor_reference: 'https://github.com/cloudflare/security-audit-skill',
     timestamp: new Date().toISOString()
   };
