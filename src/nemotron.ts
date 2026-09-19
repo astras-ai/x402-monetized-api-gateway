@@ -11,6 +11,8 @@ export interface NemotronRequest {
   input?: string;
   topic?: string;
   model?: string;
+  base_url?: string;
+  baseUrl?: string;
   messages?: Array<{ role: string; content: any }>;
   max_tokens?: number;
   temperature?: number;
@@ -220,7 +222,59 @@ export async function runNemotron(
     }
   }
 
-  // Define HTTP Provider Call Helpers
+  // Custom OpenAI-Compatible Base URL Provider Helper
+  const tryCustomBaseUrl = async (baseUrl: string, key: string): Promise<NemotronResponse | null> => {
+    try {
+      let endpoint = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      if (!endpoint.endsWith('/chat/completions')) {
+        endpoint += '/chat/completions';
+      }
+      const modelName = req.model || 'default-model';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (key) {
+        headers['Authorization'] = `Bearer ${key}`;
+      }
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: modelName,
+          messages: req.messages || [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: promptText }
+          ],
+          max_tokens: maxTokens,
+          temperature
+        })
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const output = data.choices?.[0]?.message?.content || data.result;
+        if (output) {
+          const text = typeof output === 'string' ? output : JSON.stringify(output);
+          const pTokens = data.usage?.prompt_tokens || Math.ceil(promptText.length / 4);
+          const cTokens = data.usage?.completion_tokens || Math.ceil(text.length / 4);
+          return {
+            result: text,
+            usage: { prompt_tokens: pTokens, completion_tokens: cTokens, total_tokens: pTokens + cTokens },
+            model: data.model || modelName,
+            provider: 'openai'
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Custom Base URL call error:', e);
+    }
+    return null;
+  };
+
+  const customUrl = req.base_url || req.baseUrl;
+  if (customUrl) {
+    const customRes = await tryCustomBaseUrl(customUrl, userKey || cfToken || '');
+    if (customRes) return customRes;
+  }
   const tryOpenAI = async (key: string): Promise<NemotronResponse | null> => {
     try {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
