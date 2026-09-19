@@ -264,7 +264,19 @@ export function App() {
       });
       setResponseHeaders(resHeaderMap);
 
-      const json = await res.json();
+      const text = await res.text();
+      let json = {};
+      try {
+        json = text ? JSON.parse(text) : { status: res.status, statusText: res.statusText || 'Empty Response Body' };
+      } catch (e) {
+        json = {
+          error: 'Non-JSON response received from server',
+          status: res.status,
+          statusText: res.statusText,
+          rawResponse: text || '(empty response body)'
+        };
+      }
+
       setExecResult({
         status: res.status,
         statusText: res.statusText,

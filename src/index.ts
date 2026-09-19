@@ -325,27 +325,58 @@ app.get('/v1/plan', (c) => {
 
 app.get('/api/networks', (c) => c.json(NETWORK_REGISTRY));
 
-// Direct x402 Tool Execution
-app.post('/v1/tools/:toolName', async (c) => {
+app.onError((err, c) => {
+  console.error('Gateway Global Error:', err);
+  return c.json({
+    status: 'error',
+    error: err.message || 'Internal Server Error',
+    timestamp: new Date().toISOString()
+  }, 500);
+});
+
+// Direct x402 Tool Execution (Supports GET and POST)
+app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
   const toolName = c.req.param('toolName');
   const network = c.req.query('network') || c.env.NETWORK || 'base';
   const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
   const payTo = c.env.PAY_TO || networkConfig.payTo || '0x003cC678764C8143a4b92370acB40e3B41319016';
 
   let body: any = {};
-  try {
-    body = await c.req.json();
-  } catch (e) {
-    body = {};
+  if (c.req.method === 'POST') {
+    try {
+      body = await c.req.json();
+    } catch (e) {
+      body = {};
+    }
+  } else {
+    // Populate body from GET query parameters
+    body = {
+      goal: c.req.query('goal') || c.req.query('prompt'),
+      prompt: c.req.query('prompt') || c.req.query('goal'),
+      code: c.req.query('code') || c.req.query('snippet'),
+      language: c.req.query('language'),
+      brief: c.req.query('brief') || c.req.query('topic'),
+      topic: c.req.query('topic') || c.req.query('brief'),
+      action: c.req.query('action'),
+      payload: c.req.query('payload'),
+      wrangler_config: c.req.query('wrangler_config'),
+      source_code: c.req.query('source_code')
+    };
   }
 
-  // Check for Payment Headers
+  // Check for Payment Headers across all common client standard aliases
   const paymentHeader =
     c.req.header('X-402-Payment') ||
+    c.req.header('x-402-payment') ||
+    c.req.header('X-Payment-Hash') ||
+    c.req.header('x-payment-hash') ||
     c.req.header('X-402-Paid') ||
+    c.req.header('x-402-paid') ||
     c.req.header('X-USDC-Tx') ||
+    c.req.header('x-usdc-tx') ||
     c.req.header('X-Payment-Header') ||
-    c.req.header('Authorization');
+    c.req.header('Authorization') ||
+    c.req.header('authorization');
 
   const isPaid = Boolean(
     paymentHeader &&
@@ -396,29 +427,38 @@ app.post('/v1/tools/:toolName', async (c) => {
 
   let resultResponse: any = null;
 
-  if (toolName === 'openspec.plan') {
-    resultResponse = await handleOpenSpecPlan(mergedEnv, body);
-  } else if (toolName === 'nemotron.chat') {
-    const res = await runNemotron(mergedEnv, body, 'chat');
-    resultResponse = {
-      ok: true,
-      tool: 'nemotron.chat',
-      prompt: body.prompt || body.goal || 'ping',
-      result: res.result,
-      usage: res.usage,
-      model: res.model,
-      provider: res.provider
-    };
-  } else if (toolName === 'review.kimi') {
-    resultResponse = await handleReviewKimi(mergedEnv, body);
-  } else if (toolName === 'audit.cf') {
-    resultResponse = await handleAuditCf(mergedEnv, body);
-  } else if (toolName === 'crypto.vault') {
-    resultResponse = await handleCryptoVault(mergedEnv, body);
-  } else if (toolName === 'design.402') {
-    resultResponse = await handleDesign402(mergedEnv, body);
-  } else {
-    return c.json({ error: `Unknown tool: ${toolName}` }, 404);
+  try {
+    if (toolName === 'openspec.plan') {
+      resultResponse = await handleOpenSpecPlan(mergedEnv, body);
+    } else if (toolName === 'nemotron.chat') {
+      const res = await runNemotron(mergedEnv, body, 'chat');
+      resultResponse = {
+        ok: true,
+        tool: 'nemotron.chat',
+        prompt: body.prompt || body.goal || 'ping',
+        result: res.result,
+        usage: res.usage,
+        model: res.model,
+        provider: res.provider
+      };
+    } else if (toolName === 'review.kimi') {
+      resultResponse = await handleReviewKimi(mergedEnv, body);
+    } else if (toolName === 'audit.cf') {
+      resultResponse = await handleAuditCf(mergedEnv, body);
+    } else if (toolName === 'crypto.vault') {
+      resultResponse = await handleCryptoVault(mergedEnv, body);
+    } else if (toolName === 'design.402') {
+      resultResponse = await handleDesign402(mergedEnv, body);
+    } else {
+      return c.json({ error: `Unknown tool: ${toolName}` }, 404);
+    }
+  } catch (err: any) {
+    return c.json({
+      status: 'error',
+      tool: toolName,
+      error: err.message || 'Tool execution error',
+      timestamp: new Date().toISOString()
+    }, 500);
   }
 
   return c.json({
@@ -436,10 +476,13 @@ app.post('/v1/tools/:toolName', async (c) => {
 
 // App & Static Asset Serving
 app.get('*', async (c) => {
+  if (c.req.path.startsWith('/v1/') || c.req.path.startsWith('/api/')) {
+    return c.json({ error: 'Endpoint not found', path: c.req.path }, 404);
+  }
   if (c.env.ASSETS) {
     return c.env.ASSETS.fetch(c.req.raw);
   }
-  return c.text('Not found', 404);
+  return c.json({ error: 'Not found', path: c.req.path }, 404);
 });
 
 export default app;
