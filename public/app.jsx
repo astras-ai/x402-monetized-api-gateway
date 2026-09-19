@@ -445,7 +445,7 @@ export function App() {
       const data = await res.json();
       if (res.ok && data.plaintext) {
         setRevealedSecrets({ ...revealedSecrets, [key_name]: data.plaintext });
-        showToast(`Decrypted ${key_name} using Master Passphrase`, 'success');
+        showToast(`Revealed secret ${key_name}`, 'success');
       } else {
         showToast(data.error || 'Decryption failed. Check passphrase.', 'error');
       }
