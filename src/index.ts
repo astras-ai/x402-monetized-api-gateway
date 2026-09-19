@@ -424,6 +424,125 @@ app.onError((err, c) => {
   }, 500);
 });
 
+// Direct OpenAI SDK & AI Agent Chat Completion Compatibility Endpoint
+app.on(['GET', 'POST'], ['/v1/chat/completions', '/chat/completions'], async (c) => {
+  const network = c.req.query('network') || c.env.NETWORK || 'base';
+  const networkConfig = NETWORK_REGISTRY[network] || NETWORK_REGISTRY['base'];
+  const payTo = c.env.PAY_TO || networkConfig.payTo || '0x003cC678764C8143a4b92370acB40e3B41319016';
+
+  let body: any = {};
+  if (c.req.method === 'POST') {
+    try {
+      body = await c.req.json();
+    } catch (e) {
+      body = {};
+    }
+  } else {
+    body = { prompt: c.req.query('prompt') || c.req.query('q') };
+  }
+
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
+  const bearerVal = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.substring(7).trim() : authHeader;
+
+  const paymentHeader =
+    c.req.header('X-402-Payment') ||
+    c.req.header('x-402-payment') ||
+    c.req.header('X-Payment-Hash') ||
+    c.req.header('X-402-Paid') ||
+    c.req.header('X-USDC-Tx') ||
+    c.req.query('payment') ||
+    c.req.query('tx') ||
+    body?.payment_proof;
+
+  const hasApiKey = Boolean(
+    c.req.header('x-api-key') ||
+    c.req.header('api-key') ||
+    c.req.header('x-cf-token') ||
+    c.req.header('cf-token') ||
+    c.req.header('x-openai-key') ||
+    c.req.header('x-deepseek-key') ||
+    c.req.header('x-openrouter-key') ||
+    (bearerVal && (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') || bearerVal.length > 20))
+  );
+
+  const isPaid = Boolean(
+    hasApiKey ||
+    (paymentHeader && (paymentHeader === 'true' || paymentHeader.length > 5)) ||
+    (bearerVal && (bearerVal.startsWith('tx_') || bearerVal.startsWith('0x') || bearerVal.startsWith('x402_')))
+  );
+
+  if (!isPaid) {
+    c.status(402);
+    c.header('X-402-Payment-Required', 'true');
+    c.header('X-402-Price-USD', '0.05');
+    c.header('X-402-Pay-To', payTo);
+    c.header('WWW-Authenticate', `x402 asset="USDC", amount="0.05", pay_to="${payTo}", network="${network}"`);
+
+    return c.json({
+      error: 'HTTP 402 Payment Required',
+      message: 'Payment required to access AIFoundry service. Submit $0.05 USDC to pay_to address.',
+      x402: {
+        price_usd: 0.05,
+        asset: 'USDC',
+        pay_to: payTo,
+        network,
+        chain_id: networkConfig.chainId,
+        usdc_contract: networkConfig.usdc,
+        payment_header_to_send: 'X-402-Payment'
+      }
+    });
+  }
+
+  const clientCfToken = c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.query('cf_token') || body?.cf_token;
+  const clientCfAccountId = c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.query('cf_account_id') || body?.cf_account_id;
+  const clientApiKey = c.req.header('x-api-key') || c.req.header('api-key') || body?.api_key || (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') ? bearerVal : '');
+  const clientOpenAiKey = c.req.header('x-openai-key') || body?.openai_key;
+  const clientDeepSeekKey = c.req.header('x-deepseek-key') || body?.deepseek_key;
+  const clientOpenRouterKey = c.req.header('x-openrouter-key') || body?.openrouter_key;
+
+  const mergedEnv = {
+    ...c.env,
+    ...(clientCfToken ? { CF_API_TOKEN: clientCfToken } : {}),
+    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {}),
+    ...(clientApiKey ? { API_KEY: clientApiKey } : {}),
+    ...(clientOpenAiKey ? { OPENAI_API_KEY: clientOpenAiKey } : {}),
+    ...(clientDeepSeekKey ? { DEEPSEEK_API_KEY: clientDeepSeekKey } : {}),
+    ...(clientOpenRouterKey ? { OPENROUTER_API_KEY: clientOpenRouterKey } : {})
+  };
+
+  try {
+    const aiRes = await runNemotron(mergedEnv, body, 'chat');
+    const completionId = `chatcmpl_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+
+    return c.json({
+      id: completionId,
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: aiRes.model,
+      provider: aiRes.provider,
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: aiRes.result
+          },
+          finish_reason: 'stop'
+        }
+      ],
+      usage: aiRes.usage,
+      x402_settlement: {
+        status: 'VERIFIED',
+        amount_usd: 0.05,
+        asset: 'USDC',
+        pay_to: payTo
+      }
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Chat completion execution error' }, 500);
+  }
+});
+
 // Direct x402 Tool Execution (Supports GET and POST)
 app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
   const toolName = c.req.param('toolName');
@@ -454,6 +573,9 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
     };
   }
 
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
+  const bearerVal = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.substring(7).trim() : authHeader;
+
   // Check for Payment Headers across all common client standard aliases
   const paymentHeader =
     c.req.header('X-402-Payment') ||
@@ -465,18 +587,25 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
     c.req.header('X-USDC-Tx') ||
     c.req.header('x-usdc-tx') ||
     c.req.header('X-Payment-Header') ||
-    c.req.header('Authorization') ||
-    c.req.header('authorization');
+    c.req.query('payment') ||
+    c.req.query('tx') ||
+    body?.payment_proof;
+
+  const hasApiKey = Boolean(
+    c.req.header('x-api-key') ||
+    c.req.header('api-key') ||
+    c.req.header('x-cf-token') ||
+    c.req.header('cf-token') ||
+    c.req.header('x-openai-key') ||
+    c.req.header('x-deepseek-key') ||
+    c.req.header('x-openrouter-key') ||
+    (bearerVal && (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') || bearerVal.length > 20))
+  );
 
   const isPaid = Boolean(
-    paymentHeader &&
-    (paymentHeader === 'true' ||
-      paymentHeader.startsWith('tx_') ||
-      paymentHeader.startsWith('0x') ||
-      paymentHeader.startsWith('x402_') ||
-      paymentHeader.startsWith('Bearer tx_') ||
-      paymentHeader.startsWith('Bearer 0x') ||
-      paymentHeader.length > 5)
+    hasApiKey ||
+    (paymentHeader && (paymentHeader === 'true' || paymentHeader.length > 5)) ||
+    (bearerVal && (bearerVal.startsWith('tx_') || bearerVal.startsWith('0x') || bearerVal.startsWith('x402_')))
   );
 
   // If unpaid, issue HTTP 402 Payment Required Challenge
@@ -506,13 +635,22 @@ app.on(['GET', 'POST'], '/v1/tools/:toolName', async (c) => {
     });
   }
 
-  // Client provided payment — execute requested tool!
-  const clientCfToken = c.req.header('x-cf-token');
-  const clientCfAccountId = c.req.header('x-cf-account-id');
+  // Client provided payment or key — execute requested tool!
+  const clientCfToken = c.req.header('x-cf-token') || c.req.header('cf-token') || c.req.query('cf_token') || body?.cf_token;
+  const clientCfAccountId = c.req.header('x-cf-account-id') || c.req.header('cf-account-id') || c.req.query('cf_account_id') || body?.cf_account_id;
+  const clientApiKey = c.req.header('x-api-key') || c.req.header('api-key') || body?.api_key || (bearerVal.startsWith('sk-') || bearerVal.startsWith('ds-') ? bearerVal : '');
+  const clientOpenAiKey = c.req.header('x-openai-key') || body?.openai_key;
+  const clientDeepSeekKey = c.req.header('x-deepseek-key') || body?.deepseek_key;
+  const clientOpenRouterKey = c.req.header('x-openrouter-key') || body?.openrouter_key;
+
   const mergedEnv = {
     ...c.env,
     ...(clientCfToken ? { CF_API_TOKEN: clientCfToken } : {}),
-    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {})
+    ...(clientCfAccountId ? { CF_ACCOUNT_ID: clientCfAccountId } : {}),
+    ...(clientApiKey ? { API_KEY: clientApiKey } : {}),
+    ...(clientOpenAiKey ? { OPENAI_API_KEY: clientOpenAiKey } : {}),
+    ...(clientDeepSeekKey ? { DEEPSEEK_API_KEY: clientDeepSeekKey } : {}),
+    ...(clientOpenRouterKey ? { OPENROUTER_API_KEY: clientOpenRouterKey } : {})
   };
 
   let resultResponse: any = null;

@@ -11,16 +11,31 @@ export async function handleDesign402(env: any, body: any) {
   let aiSpec = '';
   let promptTokens = Math.ceil(brief.length / 4);
   let completionTokens = 350;
+  let usedModel = 'embedded_llm';
+  let usedProvider = 'embedded_llm';
 
-  if (includeAiInsights && (env?.AI || env?.NEMOTRON_URL)) {
+  if (includeAiInsights) {
     try {
-      const aiRes = await runNemotron(env, {
-        prompt: `Generate an OpenDesign UI/UX architectural spec for a web application brief: "${brief}". Include color tokens, typography, component layout hierarchy, and x402 paywall wireframe guidelines.`
-      }, 'chat');
+      const systemPrompt = `You are OpenDesign UI/UX Architect powered by DeepSeek & Workers AI.
+Generate a high-end SaaS design spec including color tokens, typography, atomic components, SVG logo spec, and x402 payment modal wireframes.`;
+
+      const aiRes = await runNemotron(
+        env,
+        {
+          prompt: `Generate an OpenDesign UI/UX architectural spec for a web application brief: "${brief}". Include color tokens, typography, component layout hierarchy, and x402 paywall wireframe guidelines.`,
+          system_prompt: systemPrompt,
+          api_key: body?.api_key,
+          cf_token: body?.cf_token
+        },
+        'design'
+      );
+
       if (aiRes?.result) {
         aiSpec = aiRes.result;
         promptTokens = aiRes.usage.prompt_tokens;
         completionTokens = aiRes.usage.completion_tokens;
+        usedModel = aiRes.model;
+        usedProvider = aiRes.provider;
       }
     } catch (e) {
       console.warn('OpenDesign AI generation fallback:', e);
@@ -69,15 +84,12 @@ export async function handleDesign402(env: any, body: any) {
           name: 'Real-Time Agent Token Budget Meter',
           wireframe_type: 'Decremental Token Progress Gauge',
           elements: ['Input Budget (10k tokens)', 'Output Budget (10k tokens)', 'JTI Grant Burn Button']
-        },
-        {
-          name: 'OpenAPI Interactive Playground & Curl Builder',
-          wireframe_type: 'Tabbed Code Runner with Raw x402 Response Headers',
-          elements: ['Auth Selector (Sandbox / API Key / L402 Macaroon)', 'Response Status Badge (200 OK / 402 Payment Required)', 'JSON Payload Inspector']
         }
       ]
     },
     ai_insights: aiSpec || `OpenDesign UI Spec generated for brief: "${brief}". Structured for 60fps responsive edge rendering with zero CLS layout shifts.`,
+    model: usedModel,
+    provider: usedProvider,
     metrics_receipt: {
       tokens_in: promptTokens,
       tokens_out: completionTokens,
@@ -86,4 +98,3 @@ export async function handleDesign402(env: any, body: any) {
     timestamp: new Date().toISOString()
   };
 }
-

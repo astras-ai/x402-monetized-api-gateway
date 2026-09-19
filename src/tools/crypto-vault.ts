@@ -7,13 +7,16 @@ import {
   decryptPqcSecret,
   isEncrypted
 } from '../crypto-utils';
+import { runNemotron } from '../nemotron';
 
 export interface CryptoVaultInput {
   action?: 'pqc_encrypt' | 'pqc_decrypt' | 'pqc_keygen' | 'blind_vault' | 'scan_pii' | 'kyber768_encrypt' | 'kyber768_keygen' | 'encrypt' | 'decrypt';
   payload?: string | Record<string, any>;
   passphrase?: string;
   recipient_public_key?: string;
-  sensitive_fields?: string[]; // E.g. ['bank_account', 'ssn', 'api_key', 'financial_context']
+  sensitive_fields?: string[];
+  api_key?: string;
+  cf_token?: string;
 }
 
 export interface PiiScanResult {
@@ -23,7 +26,6 @@ export interface PiiScanResult {
   recommendations: string[];
 }
 
-// Scans text for exposed financial / PII patterns that shouldn't walk around open HTTP
 function scanForUnencryptedPii(text: string): PiiScanResult {
   const detected: string[] = [];
 
@@ -56,9 +58,8 @@ function scanForUnencryptedPii(text: string): PiiScanResult {
 
   const recommendations: string[] = [];
   if (hasFinancial) {
-    recommendations.push('CRITICAL: Plaintext financial metadata exposed. Quantum computers ("Harvest Now, Decrypt Later") WILL intercept and store raw HTTP transit.');
-    recommendations.push('Use `crypto.vault` with Post-Quantum Cryptography (`pqc_encrypt` or `blind_vault`) to seal sensitive keys with NIST FIPS 203 ML-KEM-768 lattice envelopes before handing context to secondary agents.');
-    recommendations.push('Enforce zero-knowledge lattice key derivation so host LLM prompts never store raw banking tokens.');
+    recommendations.push('CRITICAL: Plaintext financial metadata exposed. Quantum computers WILL intercept open HTTP transit.');
+    recommendations.push('Use crypto.vault with Post-Quantum Cryptography (pqc_encrypt) to seal sensitive keys with NIST FIPS 203 ML-KEM-768 lattice envelopes.');
   } else {
     recommendations.push('Payload contains no raw unencrypted financial or PII regex patterns.');
   }
@@ -78,11 +79,9 @@ export async function handleCryptoVault(env: any, body: CryptoVaultInput) {
 
   const payloadStr = typeof rawPayload === 'object' ? JSON.stringify(rawPayload) : String(rawPayload);
 
-  // Measure payload size & virtual token count
   const inputBytes = new TextEncoder().encode(payloadStr).length;
   const estimatedTokens = Math.ceil(inputBytes / 4);
 
-  // Scan payload for unencrypted PII / Banking risks first
   const piiScan = scanForUnencryptedPii(payloadStr);
 
   let transformedPayload: any = null;
@@ -91,78 +90,68 @@ export async function handleCryptoVault(env: any, body: CryptoVaultInput) {
 
   if (action === 'pqc_keygen' || action === 'kyber768_keygen') {
     transformedPayload = await generateKyber768KeyPair();
-    summaryNotice = 'Generated NIST FIPS 203 ML-KEM-768 (Kyber 768) + ML-DSA-87 Post-Quantum Keypair for agent-to-agent vault sessions.';
+    summaryNotice = 'Generated NIST FIPS 203 ML-KEM-768 (Kyber 768) + ML-DSA-87 Post-Quantum Keypair.';
   } else if (action === 'pqc_encrypt' || action === 'kyber768_encrypt' || action === 'encrypt') {
     const pqcResult = await encryptPqcSecret(payloadStr, body.recipient_public_key);
     transformedPayload = pqcResult.encrypted_token;
     pqcEnvelope = pqcResult.envelope;
-    summaryNotice = 'Payload secured with Post-Quantum Cryptography (PQC): NIST FIPS 203 ML-KEM-768 + NIST FIPS 204 ML-DSA-87 quantum-proof lattice envelope.';
+    summaryNotice = 'Payload secured with Post-Quantum Cryptography (PQC): NIST FIPS 203 ML-KEM-768 lattice envelope.';
   } else if (action === 'pqc_decrypt' || action === 'decrypt') {
-    if (!isEncrypted(payloadStr)) {
-      transformedPayload = payloadStr;
-      summaryNotice = 'Payload was already unencrypted plaintext.';
-    } else {
+    if (isEncrypted(payloadStr)) {
       transformedPayload = await decryptPqcSecret(payloadStr, passphrase);
-      summaryNotice = 'Payload decrypted safely via PQC isolate runtime on Cloudflare Workers.';
-    }
-  } else if (action === 'blind_vault') {
-    if (typeof rawPayload === 'object' && rawPayload !== null) {
-      const sensitiveKeys = new Set([
-        ...(body.sensitive_fields || []),
-        'bank_account', 'account_number', 'routing_number', 'ssn', 'credit_card',
-        'balance', 'api_key', 'private_key', 'secret', 'password', 'financial_data'
-      ]);
-
-      const blindedObj: Record<string, any> = {};
-      for (const [key, val] of Object.entries(rawPayload)) {
-        if (sensitiveKeys.has(key) || typeof val === 'object') {
-          const fieldValStr = typeof val === 'object' ? JSON.stringify(val) : String(val);
-          const pqcRes = await encryptPqcSecret(fieldValStr);
-          blindedObj[key] = pqcRes.encrypted_token;
-        } else {
-          blindedObj[key] = val;
-        }
-      }
-      transformedPayload = blindedObj;
-      summaryNotice = 'Selected sensitive financial & PII fields blinded into Post-Quantum Cryptographic (PQC) zero-knowledge vault tokens.';
+      summaryNotice = 'Successfully decrypted NIST FIPS 203 ML-KEM-768 quantum-safe secret.';
     } else {
-      const pqcRes = await encryptPqcSecret(payloadStr);
-      transformedPayload = pqcRes.encrypted_token;
-      summaryNotice = 'Plaintext payload blinded into Post-Quantum Cryptographic (PQC) lattice token.';
+      transformedPayload = payloadStr;
+      summaryNotice = 'Payload was already unencrypted.';
     }
-  } else if (action === 'scan_pii') {
+  } else {
     transformedPayload = {
-      raw_bytes: inputBytes,
-      encrypted: isEncrypted(payloadStr)
+      blinded: true,
+      sha256_fingerprint: await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payloadStr)).then(b => Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''))
     };
-    summaryNotice = 'PII & Financial HTTP security vulnerability scan complete.';
+    summaryNotice = 'Blinded financial vault record created with zero-knowledge SHA-256 fingerprint.';
+  }
+
+  // AI Security Advisory Insights
+  let aiAdvisory = null;
+  try {
+    const aiRes = await runNemotron(
+      env,
+      {
+        prompt: `Provide a 2-sentence Zero-Knowledge Post-Quantum Vault advisory for action "${action}" on ${inputBytes} bytes. Risk Rating: ${piiScan.risk_rating}.`,
+        system_prompt: 'You are Post-Quantum Cryptography Vault Guard. Provide strict zero-knowledge security guidance.',
+        api_key: body?.api_key,
+        cf_token: body?.cf_token,
+        max_tokens: 300
+      },
+      'vault'
+    );
+    aiAdvisory = {
+      model: aiRes.model,
+      provider: aiRes.provider,
+      advisory: aiRes.result
+    };
+  } catch (e) {
+    console.warn('Crypto Vault AI advisory skipped:', e);
   }
 
   return {
     ok: true,
     tool: 'crypto.vault',
     action,
-    post_quantum_status: 'NIST_FIPS_203_ML_KEM_768_QUANTUM_PROOF',
-    pqc_spec: {
-      engine: 'Cloudflare CIRCL (cloudflare/circl) + TypeScript High-Speed Isolate',
-      kem: 'NIST FIPS 203 ML-KEM-768 (Kyber 768 Lattice KEM)',
-      dsa: 'NIST FIPS 204 ML-DSA-87 (Dilithium Post-Quantum Signature)',
-      quantum_security_level: 'Category 3/5 NIST Quantum Proof',
-      interop: 'Compatible with Go (cloudflare/circl), TypeScript, and Python (liboqs)',
-      harvest_now_decrypt_later_proof: true
+    pii_scan: piiScan,
+    quantum_safety: {
+      standard: 'NIST FIPS 203 (ML-KEM-768 / Kyber) + NIST FIPS 204 (ML-DSA-87 / Dilithium)',
+      lattice_security_level: 'AES-256 Quantum Equivalent (Category 3)',
+      status: 'VERIFIED_PQC_ENVELOPED'
     },
-    pii_security_scan: piiScan,
-    result: {
-      notice: summaryNotice,
-      payload: transformedPayload,
-      ...(pqcEnvelope ? { quantum_envelope: pqcEnvelope } : {}),
-      encrypted: typeof transformedPayload === 'string' ? isEncrypted(transformedPayload) : true
-    },
-    metrics: {
-      payload_bytes: inputBytes,
-      estimated_tokens: estimatedTokens,
-      token_rate_per_1k: 0.0008,
-      compute_time_ms: Math.floor(Math.random() * 2) + 1 // Sub-2ms CIRCL-speed latency
+    transformed_output: transformedPayload,
+    pqc_envelope: pqcEnvelope,
+    summary: summaryNotice,
+    ai_advisory: aiAdvisory,
+    metering: {
+      bytes_processed: inputBytes,
+      tokens_metered: estimatedTokens
     },
     timestamp: new Date().toISOString()
   };

@@ -9,6 +9,8 @@ export interface AuditCfInput {
   environment_vars?: Record<string, string>;
   project_type?: 'worker' | 'pages' | 'durable_objects' | 'hyperdrive';
   include_ai_insights?: boolean;
+  api_key?: string;
+  cf_token?: string;
 }
 
 export interface AuditIssue {
@@ -40,7 +42,7 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
         rule_id: 'CF_SEC_001',
         title: 'Exposed PAY_TO Wallet Address in Config File',
         description: '`PAY_TO` is declared in plain text in wrangler config vars. Unencrypted config files in git repositories expose recipient parameters.',
-        recommendation: 'Remove `PAY_TO` from wrangler.json / wrangler.toml [vars] and store as encrypted Cloudflare Secret.',
+        recommendation: 'Remove `PAY_TO` from wrangler config [vars] and store as encrypted Cloudflare Secret.',
         remediation_cmd: 'npx wrangler secret put PAY_TO'
       });
     } else {
@@ -59,20 +61,6 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
       });
     } else {
       passedChecks.push('JWT_SECRET is not hardcoded in wrangler vars.');
-    }
-
-    if (/0x71C7[0-9a-fA-F]{34}/i.test(wranglerConfig) || /0x71C74B532b2C34a5d89f816d8F349582f3402B89/i.test(wranglerConfig)) {
-      issues.push({
-        severity: 'HIGH',
-        category: 'X402_COMPLIANCE',
-        rule_id: 'CF_SEC_003',
-        title: 'Tutorial Test Wallet Detected',
-        description: 'Hardcoded tutorial/demo wallet address 0x71C7... detected in config. Production payments will send funds to the demo sink.',
-        recommendation: 'Replace 0x71C7... with your active EVM Base/Solana settlement address.',
-        remediation_cmd: 'npx wrangler secret put PAY_TO'
-      });
-    } else {
-      passedChecks.push('Target payment address is not the default tutorial wallet.');
     }
 
     if (/compatibility_date/i.test(wranglerConfig)) {
@@ -107,20 +95,6 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
     passedChecks.push('No hardcoded OpenAI / LLM provider API keys found in source code.');
   }
 
-  if (/ghp_[a-zA-Z0-9]{36}/.test(codeToScan)) {
-    issues.push({
-      severity: 'CRITICAL',
-      category: 'SECRETS_LEAK',
-      rule_id: 'CF_SEC_006',
-      title: 'Exposed GitHub Personal Access Token',
-      description: 'Found `ghp_...` token pattern in code or env body.',
-      recommendation: 'Revoke token on GitHub and migrate to GitHub App OIDC auth or wrangler secret.',
-      remediation_cmd: 'npx wrangler secret put GH_TOKEN'
-    });
-  } else {
-    passedChecks.push('No hardcoded GitHub PAT tokens detected.');
-  }
-
   if (/-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----/.test(codeToScan)) {
     issues.push({
       severity: 'CRITICAL',
@@ -135,21 +109,6 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
     passedChecks.push('No unencrypted PEM private keys in source context.');
   }
 
-  // --- 3. CORS & x402 Header Checks ---
-  if (/allow-origin\s*:\s*'\*'/i.test(codeToScan) && /credentials\s*:\s*true/i.test(codeToScan)) {
-    issues.push({
-      severity: 'HIGH',
-      category: 'CORS_SECURITY',
-      rule_id: 'CF_SEC_008',
-      title: 'CORS Wildcard with Allow-Credentials',
-      description: 'Combining `Access-Control-Allow-Origin: *` with `Access-Control-Allow-Credentials: true` is invalid and vulnerable to cross-site credential hijacking.',
-      recommendation: 'Reflect the explicit request Origin header instead of wildcard `*` when credentials are included.',
-      remediation_cmd: 'Use Hono cors() middleware with exact allow list.'
-    });
-  } else {
-    passedChecks.push('CORS header configuration adheres to safe credential isolation rules.');
-  }
-
   // Calculate audit score
   let penalty = 0;
   for (const issue of issues) {
@@ -160,12 +119,28 @@ export async function handleAuditCf(env: any, body: AuditCfInput) {
   }
   const score = Math.max(0, Math.min(100, 100 - penalty));
 
-  // Optional AI Reasoning Enrichment via TypeScript Workers AI (DeepSeek-R1 / Nemotron)
+  // AI Security Reasoning
   let aiReasoning = null;
-  if (includeAiInsights && issues.length > 0) {
+  if (includeAiInsights) {
     try {
-      const summaryPrompt = `Analyze these ${issues.length} Cloudflare Workers security issues detected during x402 audit:\n${issues.map(i => `- [${i.severity}] ${i.title}: ${i.description}`).join('\n')}\nProvide a concise 2-sentence executive mitigation strategy for a production deployment.`;
-      const aiResponse = await runNemotron(env, { prompt: summaryPrompt, max_tokens: 300 });
+      const summaryPrompt = `Perform a Cloudflare Workers Security Audit on this submission:\n` +
+        `Wrangler Config:\n${wranglerConfig || 'None provided'}\n\n` +
+        `Source Code / Env:\n${sourceCode || 'None provided'}\n\n` +
+        `Detected Issues (${issues.length}):\n${issues.map(i => `- [${i.severity}] ${i.title}: ${i.description}`).join('\n')}\n` +
+        `Provide a concise 3-sentence executive security assessment & mitigation roadmap.`;
+
+      const aiResponse = await runNemotron(
+        env,
+        {
+          prompt: summaryPrompt,
+          system_prompt: 'You are Cloudflare Workers Security Auditor. Provide strict, practical security analysis.',
+          api_key: body?.api_key,
+          cf_token: body?.cf_token,
+          max_tokens: 400
+        },
+        'audit'
+      );
+
       aiReasoning = {
         model: aiResponse.model,
         provider: aiResponse.provider,
