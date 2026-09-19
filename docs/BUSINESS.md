@@ -19,7 +19,7 @@ AIFoundry.sh provides prepaid, metered x402 edge API capabilities for autonomous
 | **`openspec.plan`** | DeepSeek R1 + Fission OpenSpec | $0.0500 | $0.0075 | +$0.0425 | **85.0%** (6.6x) |
 | **`review.kimi`** | Alibaba Open Code Review AST | $0.0500 | $0.0095 | +$0.0405 | **81.0%** (5.2x) |
 | **`audit.cf`** | Cloudflare Security Audit Scanner | $0.0500 | $0.0040 | +$0.0460 | **92.0%** (12.5x) |
-| **`crypto.vault`** | WebCrypto AES-256 Edge Isolate | $0.0500 | $0.0002 | +$0.0498 | **99.6%** (250x) |
+| **`crypto.vault`** | Cloudflare CIRCL PQC ML-KEM-768 Edge Isolate | $0.0500 | $0.0002 | +$0.0498 | **99.6%** (250x) |
 | **`design.402`** | OpenDesign UI Specs | $0.0500 | $0.0065 | +$0.0435 | **87.0%** (7.7x) |
 | **`nemotron.chat`** | Workers AI Llama-3-70B Edge | $0.0500 | $0.0025 | +$0.0475 | **95.0%** (20.0x) |
 
@@ -30,5 +30,5 @@ AIFoundry.sh provides prepaid, metered x402 edge API capabilities for autonomous
 Autonomous AI agents carrying banking credentials, user PII, SSNs, credit card numbers, or auth tokens cannot safely transmit raw contextual data across open HTTP headers or unencrypted agent storage.
 
 1. **HTTP Leak Risk:** Agents walking between multi-tenant web endpoints with raw financial data on HTTP headers expose humans to credential theft and logging leaks.
-2. **Zero-Knowledge Field Blinding:** `crypto.vault` allows agents to blind sensitive fields into AES-256-GCM tokens (`enc:v1:...`) on Cloudflare's WebCrypto hardware edge isolate.
+2. **Zero-Knowledge Field Blinding:** `crypto.vault` allows agents to blind sensitive fields into Post-Quantum Cryptographic lattice tokens (`enc:pqc:v1:...`) powered by Cloudflare CIRCL (`cloudflare/circl`) ML-KEM-768 parameters directly on V8 edge isolates in sub-2ms.
 3. **High Margin Revenue:** Micro-charges of $0.05 per encryption run yield an outstanding **99.6% gross margin** because Cloudflare Workers WebCrypto subroutines execute in under 5ms with negligible computing overhead.

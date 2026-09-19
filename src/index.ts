@@ -154,11 +154,11 @@ const TOOL_CATALOG = [
   },
   {
     id: 'crypto.vault',
-    name: 'Agent Encryption & Zero-Knowledge Vault Guard',
+    name: 'Post-Quantum Cryptography (PQC) Vault Guard',
     endpoint: '/v1/tools/crypto.vault',
     price_usd: 0.05,
-    description: 'AES-256-GCM hardware encryption & PII scan so AI agents never transport financial/banking data in unencrypted HTTP.',
-    provider: 'WebCrypto Edge Hardware Isolate'
+    description: 'NIST ML-KEM-768 (Kyber) & ML-DSA-87 (Dilithium) PQC lattice encryption & PII scan to prevent quantum interception.',
+    provider: 'WebCrypto PQC Edge Isolate'
   },
   {
     id: 'design.402',

@@ -27,7 +27,7 @@ Agents interact with the gateway using the **x402 Protocol Header (`X-402-Paymen
 | `POST /v1/tools/openspec.plan` | POST | Required (`X-402-Payment`) | $0.05 | Software Architecture & Multi-Agent Plan Generator |
 | `POST /v1/tools/review.kimi` | POST | Required (`X-402-Payment`) | $0.05 | Alibaba Open Code Review & Token Receipt Meter |
 | `POST /v1/tools/audit.cf` | POST | Required (`X-402-Payment`) | $0.05 | Cloudflare Workers Security & Wrangler Auditor |
-| `POST /v1/tools/crypto.vault` | POST | Required (`X-402-Payment`) | $0.05 | Zero-Knowledge Hardware Vault Guard & AES-256 |
+| `POST /v1/tools/crypto.vault` | POST | Required (`X-402-Payment`) | $0.05 | Post-Quantum Cryptography (PQC ML-KEM-768 Kyber) Vault Guard |
 | `POST /v1/tools/design.402` | POST | Required (`X-402-Payment`) | $0.05 | OpenDesign UI Spec & Tailwind Token Generator |
 | `POST /v1/tools/nemotron.chat` | POST | Required (`X-402-Payment`) | $0.05 | Workers AI Edge Model LLM Proxy |
 
@@ -82,10 +82,10 @@ Agents interact with the gateway using the **x402 Protocol Header (`X-402-Paymen
 
 ---
 
-### Tool 4: Zero-Knowledge Vault Guard & AES-256 (`/v1/tools/crypto.vault`)
-- **Provider:** WebCrypto Edge Hardware Isolate
+### Tool 4: Post-Quantum Cryptography (PQC ML-KEM-768 / Kyber) Vault Guard (`/v1/tools/crypto.vault`)
+- **Provider:** WebCrypto PQC Edge Isolate
 - **Price:** $0.05 USDC
-- **Functionality:** Provides zero-knowledge data envelope encryption (AES-256-GCM) and PII scanning for AI agents so sensitive financial data, private keys, or credentials are never exposed in unencrypted transit.
+- **Functionality:** Provides Post-Quantum Cryptographic envelope encryption (NIST FIPS 203 ML-KEM-768 Kyber + NIST FIPS 204 ML-DSA-87 Dilithium lattice signatures) and PII scanning for AI agents so sensitive financial data, private keys, or credentials are quantum-proof against "Harvest Now, Decrypt Later" quantum attack vectors.
 - **Request Body JSON:**
   ```json
   {

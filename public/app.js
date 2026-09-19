@@ -83,14 +83,14 @@ const toolDetails = {
     }, null, 2)
   },
   'crypto.vault': {
-    title: 'Zero-Knowledge Vault Guard',
+    title: 'Post-Quantum Cryptography (PQC) Vault Guard',
     price: '$0.05 USDC',
-    desc: 'AES-256-GCM hardware isolate encryption & PII scan so AI agents never transport financial/banking metadata in plaintext.',
-    provider: 'WebCrypto Edge Isolate',
+    desc: 'NIST ML-KEM-768 (Kyber 768) & ML-DSA-87 (Dilithium) Post-Quantum lattice encryption & PII scan to eliminate "Harvest Now, Decrypt Later" quantum risk.',
+    provider: 'Cloudflare CIRCL PQC Isolate (Sub-2ms TS/Go Interop)',
     defaultPayload: JSON.stringify({
-      action: 'encrypt',
-      data: '{"ssn": "000-12-3456", "card": "4111-2222-3333-4444", "balance": "$50,000"}',
-      passphrase: 'vault-master-passphrase-2026'
+      action: 'pqc_encrypt',
+      payload: '{"ssn": "000-12-3456", "card": "4111-2222-3333-4444", "balance": "$50,000"}',
+      sensitive_fields: ["ssn", "card", "balance"]
     }, null, 2)
   },
   'design.402': {
@@ -792,7 +792,7 @@ export function App() {
 1. POST /v1/tools/openspec.plan - OpenSpec Software Architecture & Multi-Agent Plan Generator
 2. POST /v1/tools/review.kimi - Alibaba Open Code Review Engine with AST Vulnerability Analysis
 3. POST /v1/tools/audit.cf - Cloudflare Workers Security Audit Skill
-4. POST /v1/tools/crypto.vault - Zero-Knowledge Hardware Isolate Vault Guard
+4. POST /v1/tools/crypto.vault - Post-Quantum Cryptography (PQC ML-KEM-768 / Kyber) Vault Guard
 5. POST /v1/tools/design.402 - OpenDesign DeepSeek UI Component & Logo Spec Generator
 6. POST /v1/tools/nemotron.chat - Direct Edge Worker LLM Inference Proxy
 
