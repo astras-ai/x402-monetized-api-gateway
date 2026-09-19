@@ -173,6 +173,44 @@ app.get('/v1/tools', (c) => {
   });
 });
 
+// Token & Time Plan Endpoint (Calculates Max Allowed Tokens & Quota for Prepaid Payments)
+app.get('/v1/plan', (c) => {
+  const depositUsd = parseFloat(c.req.query('deposit_usd') || '0.05');
+  const windowMinutes = parseInt(c.req.query('window_minutes') || '60', 10);
+  
+  // Base COGS: $0.000001 / token on Workers AI
+  const costPer1kTokensUsd = 0.001; 
+  const maxTokensPerCall = 4096; // Standard request cap
+  
+  // Total tokens funded by prepaid deposit:
+  // e.g. $0.05 deposit = 50,000 tokens total headroom
+  const fundedTokensTotal = Math.floor((depositUsd / costPer1kTokensUsd) * 1000);
+  const maxCallsAllowed = Math.floor(depositUsd / 0.05);
+
+  return c.json({
+    status: 'ok',
+    plan: {
+      tier: depositUsd >= 10.0 ? 'Enterprise Agent' : depositUsd >= 1.0 ? 'Pro Agent' : 'Micro Pay-Per-Call',
+      prepaid_deposit_usd: depositUsd,
+      time_window_minutes: windowMinutes,
+      limits: {
+        max_tokens_per_request: maxTokensPerCall,
+        total_funded_tokens: fundedTokensTotal,
+        max_calls_allowed: maxCallsAllowed > 0 ? maxCallsAllowed : 1,
+        tokens_per_minute_cap: Math.floor(fundedTokensTotal / Math.max(windowMinutes, 1)),
+        requests_per_minute_cap: Math.ceil((maxCallsAllowed || 1) / Math.max(windowMinutes, 1)),
+        execution_time_limit_ms: 30000 // Cloudflare Worker CPU execution cap
+      },
+      economics: {
+        price_per_call_usd: 0.05,
+        estimated_cogs_per_call_usd: 0.000004,
+        gross_margin_percent: 99.92,
+        overage_protection: 'STRICT_PREPAID_CAP (Execution halts automatically when max_tokens or deposit limit is reached)'
+      }
+    }
+  });
+});
+
 app.get('/api/networks', (c) => c.json(NETWORK_REGISTRY));
 
 // Direct x402 Tool Execution

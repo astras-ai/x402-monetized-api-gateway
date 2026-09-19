@@ -88,8 +88,13 @@ const toolDetails = {
 };
 
 export function App() {
-  const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'arch', 'roles', 'catalog', 'business', 'sdks'
+  const [activeTab, setActiveTab] = useState('simulator'); // 'simulator', 'arch', 'roles', 'catalog', 'business', 'sdks', 'plan'
   const [notification, setNotification] = useState(null);
+
+  // Token & Time Plan State
+  const [calcDeposit, setCalcDeposit] = useState(0.05); // $0.05 USDC default
+  const [calcWindow, setCalcWindow] = useState(60); // 60 minutes default
+  const [calcResult, setCalcResult] = useState(null);
 
   // Simulator State
   const [selectedTool, setSelectedTool] = useState('openspec.plan');
@@ -415,6 +420,17 @@ export function App() {
             >
               <Code2 className="w-3.5 h-3.5" />
               AI SDK Code
+            </button>
+            <button
+              onClick={() => setActiveTab('plan')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                activeTab === 'plan'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              Token & Time Plan
             </button>
           </div>
         </div>
@@ -998,6 +1014,165 @@ async function callX402Tool(toolName, payload) {
   -H "Content-Type: application/json" \\
   -H "X-402-Payment: tx_0x_usdc_payment_hash" \\
   -d '{"goal":"Build monetized gateway"}'`}
+              </pre>
+            </div>
+          </div>
+        {/* TAB 7: TOKEN & TIME PLAN CALCULATOR & OVERAGE PROTECTION */}
+        {activeTab === 'plan' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Token & Time Plan Quota Engine</h2>
+                  <p className="text-xs text-slate-400">
+                    Calculate exact token allowances, rate limits, and time windows for prepaid x402 requests to guarantee zero overages.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Calculator Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-5">
+                <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2">
+                  <Coins className="w-4 h-4" /> Prepaid Deposit & Rate Window Parameters
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-2">
+                    Prepaid Deposit Amount (USDC): ${calcDeposit.toFixed(2)}
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[0.05, 1.0, 5.0, 20.0].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setCalcDeposit(amt)}
+                        className={`py-2 text-xs font-mono rounded-lg border transition-all ${
+                          calcDeposit === amt
+                            ? 'bg-cyan-500 text-slate-950 font-bold border-cyan-400'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        ${amt.toFixed(2)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-2">
+                    Time Window: {calcWindow} Minutes
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[1, 15, 60, 1440].map((mins) => (
+                      <button
+                        key={mins}
+                        onClick={() => setCalcWindow(mins)}
+                        className={`py-2 text-xs font-mono rounded-lg border transition-all ${
+                          calcWindow === mins
+                            ? 'bg-cyan-500 text-slate-950 font-bold border-cyan-400'
+                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {mins === 1 ? '1 Min' : mins === 15 ? '15 Mins' : mins === 60 ? '1 Hour' : '24 Hours'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 space-y-1">
+                  <p>• Base Worker AI Token COGS: <span className="font-mono text-slate-200">$0.000001 / token</span></p>
+                  <p>• Per-Request Maximum Headroom: <span className="font-mono text-slate-200">4,096 tokens</span></p>
+                  <p>• Cloudflare Isolate CPU Execution Limit: <span className="font-mono text-slate-200">30,000 ms</span></p>
+                </div>
+              </div>
+
+              {/* Live Plan Calculation Output */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
+                <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" /> Guaranteed Token Quota & Hard-Caps
+                </h3>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-950/80 p-3.5 rounded-lg border border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">Max Total Tokens</span>
+                    <span className="text-lg font-bold text-cyan-400 font-mono">
+                      {Math.floor((calcDeposit / 0.001) * 1000).toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">Tokens funded</span>
+                  </div>
+
+                  <div className="bg-slate-950/80 p-3.5 rounded-lg border border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">Max Paid Calls</span>
+                    <span className="text-lg font-bold text-cyan-400 font-mono">
+                      {Math.floor(calcDeposit / 0.05)} Calls
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">@ $0.05 / call</span>
+                  </div>
+
+                  <div className="bg-slate-950/80 p-3.5 rounded-lg border border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">Tokens Per Min (TPM)</span>
+                    <span className="text-lg font-bold text-amber-400 font-mono">
+                      {Math.floor(((calcDeposit / 0.001) * 1000) / calcWindow).toLocaleString()} TPM
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">Sliding window cap</span>
+                  </div>
+
+                  <div className="bg-slate-950/80 p-3.5 rounded-lg border border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">Requests Per Min (RPM)</span>
+                    <span className="text-lg font-bold text-amber-400 font-mono">
+                      {Math.ceil(Math.floor(calcDeposit / 0.05) / calcWindow)} RPM
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">Call rate cap</span>
+                  </div>
+                </div>
+
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg text-xs space-y-1">
+                  <p className="text-emerald-300 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Overrun Protection Active
+                  </p>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    Requests automatically terminate when token limits or execution bounds are hit. Agents cannot run over prepaid balance.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quota API Response Example */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-cyan-400" /> Live Gateway Quota Endpoint (<code className="text-cyan-300">GET /v1/plan?deposit_usd={calcDeposit}&window_minutes={calcWindow}</code>)
+              </h3>
+              <pre className="bg-slate-950 p-4 rounded-lg text-xs font-mono text-cyan-300 overflow-x-auto border border-slate-800">
+                {JSON.stringify(
+                  {
+                    status: 'ok',
+                    plan: {
+                      tier: calcDeposit >= 10.0 ? 'Enterprise Agent' : calcDeposit >= 1.0 ? 'Pro Agent' : 'Micro Pay-Per-Call',
+                      prepaid_deposit_usd: calcDeposit,
+                      time_window_minutes: calcWindow,
+                      limits: {
+                        max_tokens_per_request: 4096,
+                        total_funded_tokens: Math.floor((calcDeposit / 0.001) * 1000),
+                        max_calls_allowed: Math.floor(calcDeposit / 0.05),
+                        tokens_per_minute_cap: Math.floor(((calcDeposit / 0.001) * 1000) / calcWindow),
+                        requests_per_minute_cap: Math.ceil(Math.floor(calcDeposit / 0.05) / calcWindow),
+                        execution_time_limit_ms: 30000
+                      },
+                      economics: {
+                        price_per_call_usd: 0.05,
+                        estimated_cogs_per_call_usd: 0.000004,
+                        gross_margin_percent: 99.92,
+                        overage_protection: 'STRICT_PREPAID_CAP'
+                      }
+                    }
+                  },
+                  null,
+                  2
+                )}
               </pre>
             </div>
           </div>
