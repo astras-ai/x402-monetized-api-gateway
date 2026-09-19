@@ -390,7 +390,9 @@ export function App() {
   };
 
   const handleAddSecret = async () => {
-    if (!newSecretKey || !newSecretValue) {
+    const trimmedKey = newSecretKey.trim().toUpperCase();
+    const trimmedVal = newSecretValue.trim();
+    if (!trimmedKey || !trimmedVal) {
       showToast('Key name and secret value are required.', 'warning');
       return;
     }
@@ -399,24 +401,25 @@ export function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key_name: newSecretKey,
-          secret_value: newSecretValue,
+          key_name: trimmedKey,
+          secret_value: trimmedVal,
           category: newSecretCategory,
-          description: newSecretDesc || 'Custom Gateway Secret',
+          description: newSecretDesc.trim() || 'Custom Gateway Secret',
           passphrase: masterPassphrase
         })
       });
-      if (res.ok) {
-        showToast(`Secret ${newSecretKey} encrypted with AES-256-GCM & saved!`, 'success');
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        showToast(`Secret ${trimmedKey} encrypted with AES-256-GCM & saved!`, 'success');
         setNewSecretKey('');
         setNewSecretValue('');
         setNewSecretDesc('');
-        refreshData();
+        await refreshData();
       } else {
-        showToast('Failed to save secret.', 'error');
+        showToast(data.error || 'Failed to save secret.', 'error');
       }
     } catch (e) {
-      showToast('Failed to save secret.', 'error');
+      showToast('Failed to save secret: ' + (e.message || e), 'error');
     }
   };
 
@@ -447,26 +450,31 @@ export function App() {
         showToast(data.error || 'Decryption failed. Check passphrase.', 'error');
       }
     } catch (e) {
-      showToast('Decryption error.', 'error');
+      showToast('Decryption error: ' + (e.message || e), 'error');
     }
   };
 
   const handleUpdateSecret = async (key_name, updatedValue) => {
-    if (!updatedValue) {
+    const trimmedVal = updatedValue ? updatedValue.trim() : '';
+    if (!trimmedVal) {
       showToast('New secret value cannot be empty.', 'warning');
       return;
     }
     try {
+      const existing = secretsList.find(s => s.key_name === key_name);
       const res = await fetch('/api/secrets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key_name,
-          secret_value: updatedValue,
+          secret_value: trimmedVal,
+          category: existing ? existing.category : 'ai',
+          description: existing ? existing.description : 'Custom Gateway Secret',
           passphrase: masterPassphrase
         })
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         showToast(`Secret ${key_name} updated & re-encrypted!`, 'success');
         setEditingSecretKey(null);
         setEditSecretValue('');
@@ -474,12 +482,12 @@ export function App() {
         const updatedRev = { ...revealedSecrets };
         delete updatedRev[key_name];
         setRevealedSecrets(updatedRev);
-        refreshData();
+        await refreshData();
       } else {
-        showToast('Failed to update secret.', 'error');
+        showToast(data.error || 'Failed to update secret.', 'error');
       }
     } catch (e) {
-      showToast('Failed to update secret.', 'error');
+      showToast('Failed to update secret: ' + (e.message || e), 'error');
     }
   };
 

@@ -571,31 +571,54 @@ app.get('/api/logs', (c) => c.json(requestLogs));
 app.get('/api/secrets', (c) => c.json(secretsStore));
 
 app.post('/api/secrets', async (c) => {
-  const body = await c.req.json();
-  const passphrase = body.passphrase || 'aifoundry-master-vault-2026';
-  
-  let valToStore = body.secret_value || '';
-  if (valToStore && !isEncrypted(valToStore)) {
-    valToStore = await encryptSecret(valToStore, passphrase);
-  }
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const key_name = (body.key_name || '').trim().toUpperCase();
+    const secret_value = (body.secret_value || '').trim();
+    const passphrase = body.passphrase || 'aifoundry-master-vault-2026';
 
-  const existingIndex = secretsStore.findIndex(s => s.key_name === body.key_name);
-  const updatedObj = {
-    key_name: body.key_name,
-    secret_value: valToStore,
-    category: body.category || 'ai',
-    description: body.description || 'Custom Gateway Secret',
-    is_encrypted: true,
-    algorithm: 'AES-256-GCM',
-    updated_at: new Date().toISOString()
-  };
+    if (!key_name) {
+      return c.json({ error: 'Secret Key Name is required' }, 400);
+    }
+    if (!secret_value) {
+      return c.json({ error: 'Secret Value cannot be empty' }, 400);
+    }
 
-  if (existingIndex >= 0) {
-    secretsStore[existingIndex] = { ...secretsStore[existingIndex], ...updatedObj };
-  } else {
-    secretsStore.push(updatedObj);
+    let valToStore = secret_value;
+    if (valToStore && !isEncrypted(valToStore)) {
+      valToStore = await encryptSecret(valToStore, passphrase);
+    }
+
+    const existingIndex = secretsStore.findIndex(s => s.key_name === key_name);
+    const existing = existingIndex >= 0 ? secretsStore[existingIndex] : null;
+
+    const updatedObj = {
+      key_name: key_name,
+      secret_value: valToStore,
+      category: body.category || (existing ? existing.category : 'ai'),
+      description: body.description || (existing ? existing.description : 'Custom Gateway Secret'),
+      is_encrypted: true,
+      algorithm: 'AES-256-GCM',
+      updated_at: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      secretsStore[existingIndex] = updatedObj;
+    } else {
+      secretsStore.push(updatedObj);
+    }
+
+    return c.json({
+      success: true,
+      key_name,
+      secret: updatedObj,
+      is_encrypted: true,
+      algorithm: 'AES-256-GCM'
+    });
+  } catch (err: any) {
+    console.error('Error saving secret:', err);
+    return c.json({ error: err.message || 'Failed to encrypt and save secret' }, 500);
   }
-  return c.json({ success: true, key_name: body.key_name, is_encrypted: true, algorithm: 'AES-256-GCM' });
 });
 
 app.post('/api/secrets/decrypt', async (c) => {
