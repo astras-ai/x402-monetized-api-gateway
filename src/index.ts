@@ -5,6 +5,7 @@ import { handleOpenSpecPlan } from './tools/openspec-plan';
 import { handleReviewKimi } from './tools/review-kimi';
 import { handleAuditCf } from './tools/audit-cf';
 import { handleDesign402 } from './tools/design-402';
+import { handleCryptoVault } from './tools/crypto-vault';
 
 type Bindings = {
   NETWORK?: string;
@@ -81,6 +82,14 @@ const TOOL_CATALOG = [
     price_usd: 0.05,
     description: 'Scans Wrangler configs & Worker code for exposed keys, insecure bindings, and x402 readiness.',
     provider: 'Cloudflare Security Audit Skill'
+  },
+  {
+    id: 'crypto.vault',
+    name: 'Agent Encryption & Zero-Knowledge Vault Guard',
+    endpoint: '/v1/tools/crypto.vault',
+    price_usd: 0.05,
+    description: 'AES-256-GCM hardware encryption & PII scan so AI agents never transport financial/banking data in unencrypted HTTP.',
+    provider: 'WebCrypto Edge Hardware Isolate'
   },
   {
     id: 'design.402',
@@ -253,6 +262,8 @@ app.post('/v1/tools/:toolName', async (c) => {
     resultResponse = await handleReviewKimi(mergedEnv, body);
   } else if (toolName === 'audit.cf') {
     resultResponse = await handleAuditCf(mergedEnv, body);
+  } else if (toolName === 'crypto.vault') {
+    resultResponse = await handleCryptoVault(mergedEnv, body);
   } else if (toolName === 'design.402') {
     resultResponse = await handleDesign402(mergedEnv, body);
   } else {
