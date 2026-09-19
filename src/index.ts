@@ -426,16 +426,20 @@ app.onError((err, c) => {
 
 async function parseRequestBody(c: any): Promise<any> {
   let body: any = {};
-  if (c.req.method === 'POST' || c.req.method === 'PUT') {
+  if (c.req.method === 'POST' || c.req.method === 'PUT' || c.req.method === 'PATCH') {
     try {
-      body = await c.req.json();
-    } catch (e) {
-      try {
-        const text = await c.req.text();
-        if (text && text.trim()) {
-          body = { prompt: text, goal: text, code: text };
+      // Safely clone request raw stream to prevent stream locked/already read errors
+      const clonedReq = c.req.raw.clone();
+      const text = await clonedReq.text();
+      if (text && text.trim()) {
+        try {
+          body = JSON.parse(text);
+        } catch (_) {
+          body = { prompt: text, goal: text, code: text, source_code: text, wrangler_config: text };
         }
-      } catch (e2) {}
+      }
+    } catch (e) {
+      console.warn('parseRequestBody stream reading warning:', e);
     }
   }
 
